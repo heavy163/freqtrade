@@ -1426,6 +1426,9 @@ class Backtesting:
                 current_time=current_time
             )
             for i, pair in enumerate(data):
+                strategy_safe_wrapper(self.strategy.notify_trade_entry, supress_error=True)(
+                    pair=pair, current_time=current_time
+                )
                 row_index = indexes[pair]
                 row = self.validate_row(data, pair, row_index, current_time)
                 if not row:

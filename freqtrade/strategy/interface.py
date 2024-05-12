@@ -277,6 +277,12 @@ class IStrategy(ABC, HyperStrategyMixin):
         """
         pass
 
+    def notify_trade_entry(self, pair: str, current_time: datetime, **kwargs) -> None:
+        """
+        debug interface
+        """
+        pass
+
     def check_buy_timeout(
         self, pair: str, trade: Trade, order: Order, current_time: datetime, **kwargs
     ) -> bool:
