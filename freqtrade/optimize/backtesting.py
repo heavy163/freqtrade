@@ -1570,6 +1570,8 @@ class Backtesting:
                 preprocessed_tmp, self.rejected_dict
             )
 
+        #add by heavy for backtest result writing.
+        strategy_safe_wrapper(strat.bot_backtest_top)()
         return min_date, max_date
 
     def _get_min_cached_backtest_date(self):

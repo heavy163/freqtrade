@@ -267,6 +267,13 @@ class IStrategy(ABC, HyperStrategyMixin):
         """
         pass
 
+    def bot_backtest_top(self, **kwargs) -> None:
+        """
+        Called only once before bot destroyed for backtest mode.
+        :param **kwargs: Ensure to keep this here so updates to this won't break your strategy.
+        """
+        pass
+
     def bot_loop_start(self, current_time: datetime, **kwargs) -> None:
         """
         Called at the start of the bot iteration (one loop).
