@@ -65,7 +65,7 @@ class DataProvider:
         self.__msg_cache = PeriodicCache(
             maxsize=1000, ttl=timeframe_to_seconds(self._default_timeframe)
         )
-
+        self._bt_future_data:Dict[str:DataFrame] = None
         self.producers = self._config.get("external_message_consumer", {}).get("producers", [])
         self.external_data_enabled = len(self.producers) > 0
 
@@ -407,6 +407,10 @@ class DataProvider:
         can be "live", "dry-run", "backtest", "edgecli", "hyperopt" or "other".
         """
         return RunMode(self._config.get("runmode", RunMode.OTHER))
+
+    @property
+    def backtest_futures_data(self) -> Dict[str, DataFrame]:
+        return self._bt_future_data
 
     def current_whitelist(self) -> List[str]:
         """

@@ -379,6 +379,8 @@ class Backtesting:
         else:
             self.futures_data = {}
 
+        self.dataprovider._bt_future_data = self.futures_data
+
     def disable_database_use(self):
         disable_database_use(self.timeframe)
 
