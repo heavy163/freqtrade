@@ -2,12 +2,13 @@
 This module contains the class to persist trades into SQLite
 """
 
-import logging
+import logging  # noqa: I001
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from math import isclose
 from typing import Any, ClassVar, Dict, List, Optional, Sequence, cast
+from freqtrade import debug
 
 from sqlalchemy import (
     Enum,
@@ -47,7 +48,6 @@ from freqtrade.misc import safe_value_fallback
 from freqtrade.persistence.base import ModelBase, SessionType
 from freqtrade.persistence.custom_data import CustomDataWrapper, _CustomData
 from freqtrade.util import FtPrecise, dt_from_ts, dt_now, dt_ts, dt_ts_none
-
 
 logger = logging.getLogger(__name__)
 
@@ -1091,6 +1091,15 @@ class LocalTrade:
         :param open_rate: open_rate to use. Defaults to self.open_rate if not provided.
         :return: profit in stake currency as float
         """
+        debug.callback(
+            __package__,
+            __name__,
+            "calc_profit",
+            trade=self,
+            rate=rate,
+            amount=amount,
+            open_rate=open_rate,
+        )
         prof = self.calculate_profit(rate, amount, open_rate)
         return prof.profit_abs
 
@@ -1105,7 +1114,15 @@ class LocalTrade:
         :param open_rate: open_rate to use. Defaults to self.open_rate if not provided.
         :return: Profit structure, containing absolute and relative profits.
         """
-
+        debug.callback(
+            __package__,
+            __name__,
+            "calculate_profit",
+            trade=self,
+            rate=rate,
+            amount=amount,
+            open_rate=open_rate,
+        )
         close_trade_value = self.calc_close_trade_value(rate, amount)
         if amount is None or open_rate is None:
             open_trade_value = self.open_trade_value
@@ -1152,6 +1169,15 @@ class LocalTrade:
         :param open_rate: open_rate to use. Defaults to self.open_rate if not provided.
         :return: profit ratio as float
         """
+        debug.callback(
+            __package__,
+            __name__,
+            "calc_profit_ratio",
+            trade=self,
+            rate=rate,
+            amount=amount,
+            open_rate=open_rate,
+        )
         close_trade_value = self.calc_close_trade_value(rate, amount)
 
         if amount is None or open_rate is None:

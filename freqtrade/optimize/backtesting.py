@@ -4,7 +4,7 @@
 This module contains the backtesting logic
 """
 
-import logging
+import logging  # noqa: I001
 from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
@@ -65,7 +65,7 @@ from freqtrade.types import BacktestResultType, get_BacktestResultType_default
 from freqtrade.util import FtPrecise
 from freqtrade.util.migrations import migrate_data
 from freqtrade.wallets import Wallets
-
+from freqtrade import debug
 
 logger = logging.getLogger(__name__)
 
@@ -893,6 +893,15 @@ class Backtesting:
         """
         Calculate funding fees if necessary and add them to the trade.
         """
+        debug.callback(
+            __package__,
+            __name__,
+            "_run_funding_fees",
+            engine=self,
+            trade=trade,
+            current_time=current_time,
+            force=force,
+        )
         if self.trading_mode == TradingMode.FUTURES:
             if force or (current_time.timestamp() % self.funding_fee_timeframe_secs) == 0:
                 # Funding fee interval.
