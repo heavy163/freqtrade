@@ -405,6 +405,7 @@ class LocalTrade:
     close_profit: Optional[float] = None
     close_profit_abs: Optional[float] = None
     stake_amount: float = 0.0
+    initial_stake_amount: float = 0.0
     max_stake_amount: Optional[float] = 0.0
     amount: float = 0.0
     amount_requested: Optional[float] = None
@@ -1673,6 +1674,7 @@ class Trade(ModelBase, LocalTrade):
     close_profit: Mapped[Optional[float]] = mapped_column(Float())  # type: ignore
     close_profit_abs: Mapped[Optional[float]] = mapped_column(Float())  # type: ignore
     stake_amount: Mapped[float] = mapped_column(Float(), nullable=False)  # type: ignore
+    initial_stake_amount: Mapped[Optional[float]] = mapped_column(Float())  # type: ignore
     max_stake_amount: Mapped[Optional[float]] = mapped_column(Float())  # type: ignore
     amount: Mapped[float] = mapped_column(Float())  # type: ignore
     amount_requested: Mapped[Optional[float]] = mapped_column(Float())  # type: ignore
