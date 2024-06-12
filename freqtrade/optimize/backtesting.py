@@ -865,6 +865,14 @@ class Backtesting:
     def _check_trade_exit(
         self, trade: LocalTrade, row: Tuple, current_time: datetime
     ) -> Optional[LocalTrade]:
+        debug.callback(
+            __package__,
+            __name__,
+            "_check_trade_exit",
+            trade=trade,
+            row=row,
+            current_time=current_time,
+        )
         self._run_funding_fees(trade, current_time)
 
         # Check if we need to adjust our current positions
@@ -1581,7 +1589,7 @@ class Backtesting:
                 preprocessed_tmp, self.rejected_dict
             )
 
-        #add by heavy for backtest result writing.
+        # add by heavy for backtest result writing.
         strategy_safe_wrapper(strat.bot_backtest_top)()
         return min_date, max_date
 
