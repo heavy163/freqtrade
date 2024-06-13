@@ -411,6 +411,8 @@ class LocalTrade:
     amount_requested: Optional[float] = None
     open_date: datetime
     close_date: Optional[datetime] = None
+    #used to mark positon adjustment time
+    last_position_ajusted_time: Optional[datetime] = None
     # absolute value of the stop loss
     stop_loss: float = 0.0
     # percentage value of the stop loss
@@ -1682,6 +1684,7 @@ class Trade(ModelBase, LocalTrade):
         nullable=False, default=datetime.now
     )
     close_date: Mapped[Optional[datetime]] = mapped_column()  # type: ignore
+    last_position_ajusted_time: Mapped[Optional[datetime]] = mapped_column()  # type: ignore
     # absolute value of the stop loss
     stop_loss: Mapped[float] = mapped_column(Float(), nullable=True, default=0.0)  # type: ignore
     # percentage value of the stop loss
