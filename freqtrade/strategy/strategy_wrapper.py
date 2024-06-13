@@ -28,12 +28,12 @@ def strategy_safe_wrapper(f: F, message: str = "", default_retval=None, supress_
             return f(*args, **kwargs)
         except ValueError as error:
             logger.warning(f"{message}Strategy caused the following exception: {error}{f}")
-            if default_retval is None and not supress_error:
+            if default_retval is None and not supress_error and True:
                 raise StrategyError(str(error)) from error
             return default_retval
         except Exception as error:
             logger.exception(f"{message}Unexpected error {error} calling {f}")
-            if default_retval is None and not supress_error:
+            if default_retval is None and not supress_error and True:
                 raise StrategyError(str(error)) from error
             return default_retval
 
