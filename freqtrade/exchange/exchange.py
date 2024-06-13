@@ -3,7 +3,7 @@
 Cryptocurrency Exchanges support
 """
 
-import asyncio
+import asyncio  # noqa: I001
 import inspect
 import logging
 import signal
@@ -11,6 +11,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from math import floor, isnan
 from threading import Lock
+import time
 from typing import Any, Coroutine, Dict, List, Literal, Optional, Tuple, Union
 
 import ccxt
@@ -530,7 +531,7 @@ class Exchange:
             amount, self.get_precision_amount(pair), self.precisionMode, contract_size
         )
 
-    def _load_async_markets(self, reload: bool = False) -> Dict[str, Any]:
+    def __load_async_markets__(self, reload: bool = False, retry_mark=0):
         try:
             markets = self.loop.run_until_complete(
                 self._api_async.load_markets(reload=reload, params={})
@@ -540,8 +541,19 @@ class Exchange:
                 raise markets
             return markets
         except asyncio.TimeoutError as e:
-            logger.warning("Could not load markets. Reason: %s", e)
+            logger.warning(" Could not load markets. Reason: %s, retried: %s", e, retry_mark)
             raise TemporaryError from e
+
+    def _load_async_markets(self, reload: bool = False, retry_times = 3) -> Dict[str, Any]:
+        retried = 0
+        while retried < retry_times:
+            try:
+                return self.__load_async_markets__(reload, retried)
+            except Exception as e:
+                retried += 1
+                if retried > retry_times:
+                    raise e
+            time.sleep(3)
 
     def reload_markets(self, force: bool = False, *, load_leverage_tiers: bool = True) -> None:
         """
