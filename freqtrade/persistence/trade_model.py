@@ -452,6 +452,10 @@ class LocalTrade:
     # Shall not be used for calculations!
     funding_fee_running: Optional[float] = None
 
+    # position flag tied with day index during turnover days.
+    long_position_flag: Optional[int] = 0
+    short_position_flag: Optional[int] = 0
+
     @property
     def stoploss_or_liquidation(self) -> float:
         if self.liquidation_price:
@@ -1746,6 +1750,12 @@ class Trade(ModelBase, LocalTrade):
     )
     funding_fee_running: Mapped[Optional[float]] = mapped_column(  # type: ignore
         Float(), nullable=True, default=None
+    )
+    long_position_flag: Mapped[Optional[int]] = mapped_column(  # type: ignore
+        Integer(), nullable=True, default=0
+    )
+    short_position_flag: Mapped[Optional[int]] = mapped_column(  # type: ignore
+        Integer(), nullable=True, default=0
     )
 
     def __init__(self, **kwargs):
