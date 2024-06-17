@@ -546,12 +546,12 @@ class Exchange:
 
     def _load_async_markets(self, reload: bool = False, retry_times = 3) -> Dict[str, Any]:
         retried = 0
-        while retried < retry_times:
+        while retried <= retry_times:
             try:
                 return self.__load_async_markets__(reload, retried)
             except Exception as e:
                 retried += 1
-                if retried > retry_times:
+                if retried == retry_times:
                     raise e
             time.sleep(3)
 
