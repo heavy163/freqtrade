@@ -24,6 +24,7 @@ def strategy_safe_wrapper(f: F, message: str = "", default_retval=None, supress_
         try:
             if "trade" in kwargs:
                 # Protect accidental modifications from within the strategy
+                kwargs["ft_kept_trade"] = kwargs["trade"]
                 kwargs["trade"] = deepcopy(kwargs["trade"])
             return f(*args, **kwargs)
         except ValueError as error:
