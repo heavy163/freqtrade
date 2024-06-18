@@ -66,6 +66,7 @@ from freqtrade.util import FtPrecise
 from freqtrade.util.migrations import migrate_data
 from freqtrade.wallets import Wallets
 from freqtrade import debug
+from freqtrade.util.backtest_util import mock_default_leverage
 
 logger = logging.getLogger(__name__)
 
@@ -360,10 +361,14 @@ class Backtesting:
             )
             # Combine data to avoid combining the data per trade.
             unavailable_pairs = []
+            mock_leverage = mock_default_leverage()
             for pair in self.pairlists.whitelist:
                 if pair not in self.exchange._leverage_tiers:
-                    unavailable_pairs.append(pair)
-                    continue
+                    # mock leverage for backtest.
+                    self.exchange._leverage_tiers[pair] = mock_leverage
+                    pass
+                    # unavailable_pairs.append(pair)
+                    # continue
 
                 self.futures_data[pair] = self.exchange.combine_funding_and_mark(
                     funding_rates=funding_rates_dict[pair],

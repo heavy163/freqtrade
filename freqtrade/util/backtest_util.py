@@ -1,0 +1,66 @@
+def mock_default_leverage():
+    return [
+        {
+            "minNotional": 0.0,
+            "maxNotional": 5000.0,
+            "maintenanceMarginRate": 0.0065,
+            "maxLeverage": 50.0,
+            "maintAmt": 0.0,
+        },
+        {
+            "minNotional": 5000.0,
+            "maxNotional": 25000.0,
+            "maintenanceMarginRate": 0.0075,
+            "maxLeverage": 40.0,
+            "maintAmt": 5.0,
+        },
+        {
+            "minNotional": 25000.0,
+            "maxNotional": 150000.0,
+            "maintenanceMarginRate": 0.01,
+            "maxLeverage": 25.0,
+            "maintAmt": 67.5,
+        },
+        {
+            "minNotional": 150000.0,
+            "maxNotional": 600000.0,
+            "maintenanceMarginRate": 0.025,
+            "maxLeverage": 20.0,
+            "maintAmt": 2317.5,
+        },
+        {
+            "minNotional": 600000.0,
+            "maxNotional": 1500000.0,
+            "maintenanceMarginRate": 0.05,
+            "maxLeverage": 10.0,
+            "maintAmt": 17317.5,
+        },
+        {
+            "minNotional": 1500000.0,
+            "maxNotional": 3000000.0,
+            "maintenanceMarginRate": 0.1,
+            "maxLeverage": 5.0,
+            "maintAmt": 92317.5,
+        },
+        {
+            "minNotional": 3000000.0,
+            "maxNotional": 5000000.0,
+            "maintenanceMarginRate": 0.125,
+            "maxLeverage": 4.0,
+            "maintAmt": 167317.5,
+        },
+        {
+            "minNotional": 5000000.0,
+            "maxNotional": 9000000.0,
+            "maintenanceMarginRate": 0.25,
+            "maxLeverage": 2.0,
+            "maintAmt": 792317.5,
+        },
+        {
+            "minNotional": 9000000.0,
+            "maxNotional": 30000000.0,
+            "maintenanceMarginRate": 0.5,
+            "maxLeverage": 1.0,
+            "maintAmt": 3042317.5,
+        },
+    ]
