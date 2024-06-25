@@ -99,6 +99,8 @@ HEADERS = [
     "exit_tag",
 ]
 
+MOCK_LERVERAGE = True
+
 
 class Backtesting:
     """
@@ -364,12 +366,11 @@ class Backtesting:
             mock_leverage = mock_default_leverage()
             for pair in self.pairlists.whitelist:
                 if pair not in self.exchange._leverage_tiers:
-                    # mock leverage for backtest.
-                    self.exchange._leverage_tiers[pair] = mock_leverage
-                    pass
-                    # unavailable_pairs.append(pair)
-                    # continue
-
+                    if MOCK_LERVERAGE:
+                        self.exchange._leverage_tiers[pair] = mock_leverage
+                    else:
+                        unavailable_pairs.append(pair)
+                        continue
                 self.futures_data[pair] = self.exchange.combine_funding_and_mark(
                     funding_rates=funding_rates_dict[pair],
                     mark_rates=mark_rates_dict[pair],
