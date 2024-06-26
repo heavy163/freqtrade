@@ -100,6 +100,7 @@ HEADERS = [
 ]
 
 _mock_leverage_for_unavailable_pairs = True
+_shift_to_prevent_future_function = True
 
 
 class Backtesting:
@@ -454,6 +455,7 @@ class Backtesting:
             # remains on the correct candle for callbacks.
             df_analyzed = df_analyzed.copy()
 
+            shifting = 1 if _shift_to_prevent_future_function else 0
             # To avoid using data from future, we use entry/exit signals shifted
             # from the previous candle
             for col in HEADERS[5:]:
@@ -462,7 +464,7 @@ class Backtesting:
                     df_analyzed[col] = (
                         df_analyzed.loc[:, col]
                         .replace([nan], [0 if not tag_col else None])
-                        .shift(1)
+                        .shift(shifting)
                     )
                 elif not df_analyzed.empty:
                     df_analyzed[col] = 0 if not tag_col else None
