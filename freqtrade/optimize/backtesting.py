@@ -99,7 +99,7 @@ HEADERS = [
     "exit_tag",
 ]
 
-MOCK_LERVERAGE = True
+_mock_leverage_for_unavailable_pairs = True
 
 
 class Backtesting:
@@ -366,7 +366,7 @@ class Backtesting:
             mock_leverage = mock_default_leverage()
             for pair in self.pairlists.whitelist:
                 if pair not in self.exchange._leverage_tiers:
-                    if MOCK_LERVERAGE:
+                    if _mock_leverage_for_unavailable_pairs:
                         self.exchange._leverage_tiers[pair] = mock_leverage
                     else:
                         unavailable_pairs.append(pair)
