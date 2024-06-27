@@ -1464,7 +1464,7 @@ class Backtesting:
 
                 row_index += 1
                 indexes[pair] = row_index
-                self.dataprovider._set_dataframe_max_index(self.required_startup + row_index)
+                self.dataprovider._set_dataframe_max_index(self.required_startup + row_index + 1)
                 self.dataprovider._set_dataframe_max_date(current_time)
                 current_detail_time: datetime = row[DATE_IDX].to_pydatetime()
                 trade_dir: Optional[LongShort] = self.check_for_trade_entry(row)
