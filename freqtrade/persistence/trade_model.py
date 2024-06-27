@@ -299,7 +299,8 @@ class Order(ModelBase):
         self.funding_fee = trade.funding_fee_running
         trade.funding_fee_running = 0.0
 
-        if self.ft_order_side == trade.entry_side and self.price:
+        #if self.ft_order_side == trade.entry_side and self.price:
+        if self.price:
             trade.open_rate = self.price
             trade.recalc_trade_from_orders()
             if trade.nr_of_successful_entries == 1:
