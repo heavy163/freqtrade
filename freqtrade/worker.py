@@ -115,10 +115,12 @@ class Worker:
             # Ping systemd watchdog before throttling
             self._notify("WATCHDOG=1\nSTATUS=State: RUNNING.")
 
+            throttle_secs = self.freqtrade.strategy.process_throttle_secs()
+            throttle_secs = self._throttle_secs if throttle_secs is None else throttle_secs
             # Use an offset of 1s to ensure a new candle has been issued
             self._throttle(
                 func=self._process_running,
-                throttle_secs=self._throttle_secs,
+                throttle_secs=throttle_secs,
                 timeframe=self._config["timeframe"] if self._config else None,
                 timeframe_offset=1,
             )

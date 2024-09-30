@@ -867,6 +867,12 @@ class IStrategy(ABC, HyperStrategyMixin):
         """
         return dataframe
 
+    def process_throttle_secs(self):
+        """
+        dynamic change the process throttle
+        """
+        return None
+
     ###
     # END - Intended to be overridden by strategy
     ###
