@@ -7,11 +7,11 @@ import asyncio  # noqa: I001
 import inspect
 import logging
 import signal
+import time
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from math import floor, isnan
 from threading import Lock
-import time
 from typing import Any, Coroutine, Dict, List, Literal, Optional, Tuple, Union
 
 import ccxt
@@ -633,7 +633,7 @@ class Exchange:
         except ccxt.BaseError as e:
             raise TemporaryError(e) from e
 
-    def _load_async_markets(self, reload: bool = False) -> Dict[str, Any]:
+    def __load_async_markets__(self, reload: bool = False) -> Dict[str, Any]:
         try:
             markets = self.loop.run_until_complete(self._api_reload_markets(reload=reload))
 
@@ -641,17 +641,17 @@ class Exchange:
                 raise markets
             return markets
         except asyncio.TimeoutError as e:
-            logger.warning(" Could not load markets. Reason: %s, retried: %s", e, retry_mark)
             raise TemporaryError from e
 
-    def _load_async_markets(self, reload: bool = False, retry_times = 3) -> Dict[str, Any]:
+    def _load_async_markets(self, reload: bool = False, retry_times=3) -> Dict[str, Any]:
         retried = 0
         while retried <= retry_times:
             try:
-                return self.__load_async_markets__(reload, retried)
+                return self.__load_async_markets__(reload)
             except Exception as e:
                 retried += 1
                 if retried == retry_times:
+                    logger.warning(" Could not load markets. Reason: %s, retried: %s", e, retried)
                     raise e
             time.sleep(3)
 
