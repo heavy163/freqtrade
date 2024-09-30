@@ -12,7 +12,7 @@ from freqtrade.enums import MarginMode, TradingMode
 from freqtrade.exceptions import DDosProtection, OperationalException, TemporaryError
 from freqtrade.exchange import Exchange
 from freqtrade.exchange.common import retrier
-from freqtrade.exchange.types import Tickers
+from freqtrade.exchange.exchange_types import CcxtBalances, FtHas, Tickers
 
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 class Kraken(Exchange):
     _params: Dict = {"trading_agreement": "agree"}
-    _ft_has: Dict = {
+    _ft_has: FtHas = {
         "stoploss_on_exchange": True,
         "stop_price_param": "stopLossPrice",
         "stop_price_prop": "stopLossPrice",
@@ -57,7 +57,7 @@ class Kraken(Exchange):
         return super().get_tickers(symbols=symbols, cached=cached)
 
     @retrier
-    def get_balances(self) -> dict:
+    def get_balances(self) -> CcxtBalances:
         if self._config["dry_run"]:
             return {}
 
@@ -78,6 +78,7 @@ class Kraken(Exchange):
                     # x["side"], x["amount"],
                 )
                 for x in orders
+                if x["remaining"] is not None and (x["side"] == "sell" or x["price"] is not None)
             ]
             for bal in balances:
                 if not isinstance(balances[bal], dict):

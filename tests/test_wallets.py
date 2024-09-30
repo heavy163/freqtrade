@@ -65,6 +65,7 @@ def test_sync_wallet_at_boot(mocker, default_conf):
     assert freqtrade.wallets.get_free("GAS") == 0.270739
     assert freqtrade.wallets.get_used("GAS") == 0.1
     assert freqtrade.wallets.get_total("GAS") == 0.260439
+    assert freqtrade.wallets.get_owned("GAS/USDT", "GAS") == 0.260439
     update_mock = mocker.patch("freqtrade.wallets.Wallets._update_live")
     freqtrade.wallets.update(False)
     assert update_mock.call_count == 0
@@ -74,6 +75,7 @@ def test_sync_wallet_at_boot(mocker, default_conf):
     assert freqtrade.wallets.get_free("NOCURRENCY") == 0
     assert freqtrade.wallets.get_used("NOCURRENCY") == 0
     assert freqtrade.wallets.get_total("NOCURRENCY") == 0
+    assert freqtrade.wallets.get_owned("NOCURRENCY/USDT", "NOCURRENCY") == 0
 
 
 def test_sync_wallet_missing_data(mocker, default_conf):
@@ -95,7 +97,7 @@ def test_sync_wallet_missing_data(mocker, default_conf):
     assert freqtrade.wallets._wallets["BNT"].used == 2.0
     assert freqtrade.wallets._wallets["BNT"].total == 3.0
     assert freqtrade.wallets._wallets["GAS"].free == 0.260739
-    assert freqtrade.wallets._wallets["GAS"].used is None
+    assert freqtrade.wallets._wallets["GAS"].used == 0.0
     assert freqtrade.wallets._wallets["GAS"].total == 0.260739
     assert freqtrade.wallets.get_free("GAS") == 0.260739
 
@@ -336,6 +338,8 @@ def test_sync_wallet_futures_live(mocker, default_conf):
     assert "USDT" in freqtrade.wallets._wallets
     assert "ETH/USDT:USDT" in freqtrade.wallets._positions
     assert freqtrade.wallets._last_wallet_refresh is not None
+    assert freqtrade.wallets.get_owned("ETH/USDT:USDT", "ETH") == 1000
+    assert freqtrade.wallets.get_owned("SOL/USDT:USDT", "SOL") == 0
 
     # Remove ETH/USDT:USDT position
     del mock_result[0]
@@ -361,13 +365,18 @@ def test_sync_wallet_dry(mocker, default_conf_usdt, fee):
     assert bal["NEO"].total == 10
     assert bal["XRP"].total == 10
     assert bal["LTC"].total == 2
-    assert bal["USDT"].total == 922.74
+    usdt_bal = bal["USDT"]
+    assert usdt_bal.free == 922.74
+    assert usdt_bal.total == 942.74
+    assert usdt_bal.used == 20.0
+    # sum of used and free should be total.
+    assert usdt_bal.total == usdt_bal.free + usdt_bal.used
 
     assert freqtrade.wallets.get_starting_balance() == default_conf_usdt["dry_run_wallet"]
     total = freqtrade.wallets.get_total("LTC")
     free = freqtrade.wallets.get_free("LTC")
     used = freqtrade.wallets.get_used("LTC")
-    assert free != 0
+    assert used != 0
     assert free + used == total
 
 

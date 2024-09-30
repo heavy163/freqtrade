@@ -1,14 +1,16 @@
 import logging
 import time
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 import pandas as pd
+from rich.text import Text
 
 from freqtrade.constants import Config
 from freqtrade.exceptions import OperationalException
 from freqtrade.optimize.analysis.lookahead import LookaheadAnalysis
 from freqtrade.resolvers import StrategyResolver
+from freqtrade.util import print_rich_table
 
 
 logger = logging.getLogger(__name__)
@@ -17,7 +19,9 @@ logger = logging.getLogger(__name__)
 class LookaheadAnalysisSubFunctions:
     @staticmethod
     def text_table_lookahead_analysis_instances(
-        config: Dict[str, Any], lookahead_instances: List[LookaheadAnalysis]
+        config: Dict[str, Any],
+        lookahead_instances: List[LookaheadAnalysis],
+        caption: Union[str, None] = None,
     ):
         headers = [
             "filename",
@@ -53,18 +57,20 @@ class LookaheadAnalysisSubFunctions:
                     [
                         inst.strategy_obj["location"].parts[-1],
                         inst.strategy_obj["name"],
-                        inst.current_analysis.has_bias,
+                        Text("Yes", style="bold red")
+                        if inst.current_analysis.has_bias
+                        else Text("No", style="bold green"),
                         inst.current_analysis.total_signals,
                         inst.current_analysis.false_entry_signals,
                         inst.current_analysis.false_exit_signals,
                         ", ".join(inst.current_analysis.false_indicators),
                     ]
                 )
-        from tabulate import tabulate
 
-        table = tabulate(data, headers=headers, tablefmt="orgtbl")
-        print(table)
-        return table, headers, data
+        print_rich_table(
+            data, headers, summary="Lookahead Analysis", table_kwargs={"caption": caption}
+        )
+        return data
 
     @staticmethod
     def export_to_csv(config: Dict[str, Any], lookahead_analysis: List[LookaheadAnalysis]):
@@ -237,8 +243,24 @@ class LookaheadAnalysisSubFunctions:
 
         # report the results
         if lookaheadAnalysis_instances:
+            caption: Union[str, None] = None
+            if any(
+                [
+                    any(
+                        [
+                            indicator.startswith("&")
+                            for indicator in inst.current_analysis.false_indicators
+                        ]
+                    )
+                    for inst in lookaheadAnalysis_instances
+                ]
+            ):
+                caption = (
+                    "Any indicators in 'biased_indicators' which are used within "
+                    "set_freqai_targets() can be ignored."
+                )
             LookaheadAnalysisSubFunctions.text_table_lookahead_analysis_instances(
-                config, lookaheadAnalysis_instances
+                config, lookaheadAnalysis_instances, caption=caption
             )
             if config.get("lookahead_analysis_exportfilename") is not None:
                 LookaheadAnalysisSubFunctions.export_to_csv(config, lookaheadAnalysis_instances)

@@ -1133,7 +1133,6 @@ class Telegram(RPCHandler):
                     curr_output = (
                         f"*{curr['currency']}:*\n"
                         f"\t`{curr['side']}: {curr['position']:.8f}`\n"
-                        f"\t`Leverage: {curr['leverage']:.1f}`\n"
                         f"\t`Est. {curr['stake']}: "
                         f"{fmt_coin(curr['est_stake'], curr['stake'], False)}`\n"
                     )
@@ -1275,7 +1274,7 @@ class Telegram(RPCHandler):
                 InlineKeyboardButton(text=trade[1], callback_data=f"force_exit__{trade[0]}")
                 for trade in trades
             ]
-            buttons_aligned = self._layout_inline_keyboard_onecol(trade_buttons)
+            buttons_aligned = self._layout_inline_keyboard(trade_buttons, cols=1)
 
             buttons_aligned.append(
                 [InlineKeyboardButton(text="Cancel", callback_data="force_exit__cancel")]
@@ -1349,12 +1348,6 @@ class Telegram(RPCHandler):
     ) -> List[List[InlineKeyboardButton]]:
         return [buttons[i : i + cols] for i in range(0, len(buttons), cols)]
 
-    @staticmethod
-    def _layout_inline_keyboard_onecol(
-        buttons: List[InlineKeyboardButton], cols=1
-    ) -> List[List[InlineKeyboardButton]]:
-        return [buttons[i : i + cols] for i in range(0, len(buttons), cols)]
-
     @authorized_only
     async def _force_enter(
         self, update: Update, context: CallbackContext, order_side: SignalDirection
@@ -1401,19 +1394,21 @@ class Telegram(RPCHandler):
             nrecent = int(context.args[0]) if context.args else 10
         except (TypeError, ValueError, IndexError):
             nrecent = 10
+        nonspot = self._config.get("trading_mode", TradingMode.SPOT) != TradingMode.SPOT
         trades = self._rpc._rpc_trade_history(nrecent)
         trades_tab = tabulate(
             [
                 [
                     dt_humanize_delta(dt_from_ts(trade["close_timestamp"])),
-                    trade["pair"] + " (#" + str(trade["trade_id"]) + ")",
+                    f"{trade['pair']} (#{trade['trade_id']}"
+                    f"{(' ' + ('S' if trade['is_short'] else 'L')) if nonspot else ''})",
                     f"{(trade['close_profit']):.2%} ({trade['close_profit_abs']})",
                 ]
                 for trade in trades["trades"]
             ],
             headers=[
                 "Close Date",
-                "Pair (ID)",
+                "Pair (ID L/S)" if nonspot else "Pair (ID)",
                 f"Profit ({stake_cur})",
             ],
             tablefmt="simple",
@@ -1787,7 +1782,7 @@ class Telegram(RPCHandler):
             "_Bot Control_\n"
             "------------\n"
             "*/start:* `Starts the trader`\n"
-            "*/stop:* Stops the trader\n"
+            "*/stop:* `Stops the trader`\n"
             "*/stopentry:* `Stops entering, but handles open trades gracefully` \n"
             "*/forceexit <trade_id>|all:* `Instantly exits the given trade or all trades, "
             "regardless of profit`\n"
@@ -1820,7 +1815,7 @@ class Telegram(RPCHandler):
             "that represents the current market direction. If no direction is provided `"
             "`the currently set market direction will be output.` \n"
             "*/list_custom_data <trade_id> <key>:* `List custom_data for Trade ID & Key combo.`\n"
-            "`If no Key is supplied it will list all key-value pairs found for that Trade ID.`"
+            "`If no Key is supplied it will list all key-value pairs found for that Trade ID.`\n"
             "_Statistics_\n"
             "------------\n"
             "*/status <trade_id>|[table]:* `Lists all open trades`\n"

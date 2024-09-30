@@ -342,8 +342,8 @@ class Order(ModelBase):
             order_id=str(order["id"]),
             ft_order_side=side,
             ft_pair=pair,
-            ft_amount=amount if amount else order["amount"],
-            ft_price=price if price else order["price"],
+            ft_amount=amount or order.get("amount", None) or 0.0,
+            ft_price=price or order.get("price", None),
         )
 
         o.update_from_ccxt_object(order)
@@ -374,12 +374,12 @@ class LocalTrade:
 
     use_db: bool = False
     # Trades container for backtesting
-    trades: List["LocalTrade"] = []
-    trades_open: List["LocalTrade"] = []
+    bt_trades: List["LocalTrade"] = []
+    bt_trades_open: List["LocalTrade"] = []
     # Copy of trades_open - but indexed by pair
     bt_trades_open_pp: Dict[str, List["LocalTrade"]] = defaultdict(list)
     bt_open_open_trade_count: int = 0
-    total_profit: float = 0
+    bt_total_profit: float = 0
     realized_profit: float = 0
 
     id: int = 0
@@ -437,6 +437,7 @@ class LocalTrade:
     amount_precision: Optional[float] = None
     price_precision: Optional[float] = None
     precision_mode: Optional[int] = None
+    precision_mode_price: Optional[int] = None
     contract_size: Optional[float] = None
 
     # Leverage trading properties
@@ -630,7 +631,7 @@ class LocalTrade:
         self.orders = []
         if self.trading_mode == TradingMode.MARGIN and self.interest_rate is None:
             raise OperationalException(
-                f"{self.trading_mode.value} trading requires param interest_rate on trades"
+                f"{self.trading_mode} trading requires param interest_rate on trades"
             )
 
     def __repr__(self):
@@ -738,6 +739,7 @@ class LocalTrade:
             "amount_precision": self.amount_precision,
             "price_precision": self.price_precision,
             "precision_mode": self.precision_mode,
+            "precision_mode_price": self.precision_mode_price,
             "contract_size": self.contract_size,
             "has_open_orders": self.has_open_orders,
             "orders": orders_json,
@@ -748,11 +750,11 @@ class LocalTrade:
         """
         Resets all trades. Only active for backtesting mode.
         """
-        LocalTrade.trades = []
-        LocalTrade.trades_open = []
+        LocalTrade.bt_trades = []
+        LocalTrade.bt_trades_open = []
         LocalTrade.bt_trades_open_pp = defaultdict(list)
         LocalTrade.bt_open_open_trade_count = 0
-        LocalTrade.total_profit = 0
+        LocalTrade.bt_total_profit = 0
 
     def adjust_min_max_rates(self, current_price: float, current_price_low: float) -> None:
         """
@@ -818,7 +820,7 @@ class LocalTrade:
         stop_loss_norm = price_to_precision(
             new_loss,
             self.price_precision,
-            self.precision_mode,
+            self.precision_mode_price,
             rounding_mode=ROUND_DOWN if self.is_short else ROUND_UP,
         )
         # no stop loss assigned yet
@@ -827,7 +829,7 @@ class LocalTrade:
             self.initial_stop_loss = price_to_precision(
                 stop_loss_norm,
                 self.price_precision,
-                self.precision_mode,
+                self.precision_mode_price,
                 rounding_mode=ROUND_DOWN if self.is_short else ROUND_UP,
             )
             self.initial_stop_loss_pct = -1 * abs(stoploss)
@@ -1085,7 +1087,7 @@ class LocalTrade:
                 return float(self._calc_base_close(amount1, rate, self.fee_close)) + funding_fees
         else:
             raise OperationalException(
-                f"{self.trading_mode.value} trading is not yet available using freqtrade"
+                f"{self.trading_mode} trading is not yet available using freqtrade"
             )
 
     def calc_profit(
@@ -1193,10 +1195,7 @@ class LocalTrade:
         else:
             open_trade_value = self._calc_open_trade_value(amount, open_rate)
 
-        short_close_zero = self.is_short and close_trade_value == 0.0
-        long_close_zero = not self.is_short and open_trade_value == 0.0
-
-        if short_close_zero or long_close_zero:
+        if open_trade_value == 0.0:
             return 0.0
         else:
             if self.is_short:
@@ -1251,7 +1250,7 @@ class LocalTrade:
                     # with realized_profit.
                     close_profit = (close_profit_abs / total_stake) * self.leverage
             else:
-                total_stake = total_stake + self._calc_open_trade_value(tmp_amount, price)
+                total_stake += self._calc_open_trade_value(tmp_amount, price)
                 max_stake_amount += tmp_amount * price
         self.funding_fees = funding_fees
         self.max_stake_amount = float(max_stake_amount)
@@ -1270,7 +1269,7 @@ class LocalTrade:
             self.open_rate = float(current_stake / current_amount)
             self.amount = current_amount_tr
             self.stake_amount = float(current_stake) / (self.leverage or 1.0)
-            self.fee_open_cost = self.fee_open * float(current_stake)
+            self.fee_open_cost = self.fee_open * float(self.max_stake_amount)
             self.recalc_open_trade_value()
             if self.stop_loss_pct is not None and self.open_rate is not None:
                 self.adjust_stop_loss(self.open_rate, self.stop_loss_pct)
@@ -1439,7 +1438,7 @@ class LocalTrade:
         Helper function to query Trades.
         Returns a List of trades, filtered on the parameters given.
         In live mode, converts the filter to a database query and returns all rows
-        In Backtest mode, uses filters on Trade.trades to get the result.
+        In Backtest mode, uses filters on Trade.bt_trades to get the result.
 
         :param pair: Filter by pair
         :param is_open: Filter by open/closed status
@@ -1452,13 +1451,13 @@ class LocalTrade:
         # Offline mode - without database
         if is_open is not None:
             if is_open:
-                sel_trades = LocalTrade.trades_open
+                sel_trades = LocalTrade.bt_trades_open
             else:
-                sel_trades = LocalTrade.trades
+                sel_trades = LocalTrade.bt_trades
 
         else:
             # Not used during backtesting, but might be used by a strategy
-            sel_trades = list(LocalTrade.trades + LocalTrade.trades_open)
+            sel_trades = list(LocalTrade.bt_trades + LocalTrade.bt_trades_open)
 
         if pair:
             sel_trades = [trade for trade in sel_trades if trade.pair == pair]
@@ -1473,24 +1472,24 @@ class LocalTrade:
 
     @staticmethod
     def close_bt_trade(trade):
-        LocalTrade.trades_open.remove(trade)
+        LocalTrade.bt_trades_open.remove(trade)
         LocalTrade.bt_trades_open_pp[trade.pair].remove(trade)
         LocalTrade.bt_open_open_trade_count -= 1
-        LocalTrade.trades.append(trade)
-        LocalTrade.total_profit += trade.close_profit_abs
+        LocalTrade.bt_trades.append(trade)
+        LocalTrade.bt_total_profit += trade.close_profit_abs
 
     @staticmethod
     def add_bt_trade(trade):
         if trade.is_open:
-            LocalTrade.trades_open.append(trade)
+            LocalTrade.bt_trades_open.append(trade)
             LocalTrade.bt_trades_open_pp[trade.pair].append(trade)
             LocalTrade.bt_open_open_trade_count += 1
         else:
-            LocalTrade.trades.append(trade)
+            LocalTrade.bt_trades.append(trade)
 
     @staticmethod
     def remove_bt_trade(trade):
-        LocalTrade.trades_open.remove(trade)
+        LocalTrade.bt_trades_open.remove(trade)
         LocalTrade.bt_trades_open_pp[trade.pair].remove(trade)
         LocalTrade.bt_open_open_trade_count -= 1
 
@@ -1596,6 +1595,7 @@ class LocalTrade:
             amount_precision=data.get("amount_precision", None),
             price_precision=data.get("price_precision", None),
             precision_mode=data.get("precision_mode", None),
+            precision_mode_price=data.get("precision_mode_price", data.get("precision_mode", None)),
             contract_size=data.get("contract_size", None),
         )
         for order in data["orders"]:
@@ -1731,6 +1731,9 @@ class Trade(ModelBase, LocalTrade):
     )
     price_precision: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)  # type: ignore
     precision_mode: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # type: ignore
+    precision_mode_price: Mapped[Optional[int]] = mapped_column(  # type: ignore
+        Integer, nullable=True
+    )
     contract_size: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)  # type: ignore
 
     # Leverage trading properties
@@ -1803,7 +1806,7 @@ class Trade(ModelBase, LocalTrade):
         Helper function to query Trades.j
         Returns a List of trades, filtered on the parameters given.
         In live mode, converts the filter to a database query and returns all rows
-        In Backtest mode, uses filters on Trade.trades to get the result.
+        In Backtest mode, uses filters on Trade.bt_trades to get the result.
 
         :return: unsorted List[Trade]
         """
@@ -2054,7 +2057,7 @@ class Trade(ModelBase, LocalTrade):
         ).all()
 
         resp: List[Dict] = []
-        for id, enter_tag, exit_reason, profit, profit_abs, count in mix_tag_perf:
+        for _, enter_tag, exit_reason, profit, profit_abs, count in mix_tag_perf:
             enter_tag = enter_tag if enter_tag is not None else "Other"
             exit_reason = exit_reason if exit_reason is not None else "Other"
 

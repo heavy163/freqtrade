@@ -123,12 +123,12 @@ def test_load_data_startup_candles(mocker, testdatadir) -> None:
 
 @pytest.mark.parametrize("candle_type", ["mark", ""])
 def test_load_data_with_new_pair_1min(
-    ohlcv_history_list, mocker, caplog, default_conf, tmp_path, candle_type
+    ohlcv_history, mocker, caplog, default_conf, tmp_path, candle_type
 ) -> None:
     """
     Test load_pair_history() with 1 min timeframe
     """
-    mocker.patch(f"{EXMS}.get_historic_ohlcv", return_value=ohlcv_history_list)
+    mocker.patch(f"{EXMS}.get_historic_ohlcv", return_value=ohlcv_history)
     exchange = get_patched_exchange(mocker, default_conf)
     file = tmp_path / "MEME_BTC-1m.feather"
 
@@ -151,9 +151,7 @@ def test_load_data_with_new_pair_1min(
     )
     load_pair_history(datadir=tmp_path, timeframe="1m", pair="MEME/BTC", candle_type=candle_type)
     assert file.is_file()
-    assert log_has_re(
-        r'\(0/1\) - Download history data for "MEME/BTC", 1m, ' r"spot and store in .*", caplog
-    )
+    assert log_has_re(r'Download history data for "MEME/BTC", 1m, ' r"spot and store in .*", caplog)
 
 
 def test_testdata_path(testdatadir) -> None:
@@ -305,9 +303,9 @@ def test_load_cached_data_for_updating(mocker, testdatadir) -> None:
     ],
 )
 def test_download_pair_history(
-    ohlcv_history_list, mocker, default_conf, tmp_path, candle_type, subdir, file_tail
+    ohlcv_history, mocker, default_conf, tmp_path, candle_type, subdir, file_tail
 ) -> None:
-    mocker.patch(f"{EXMS}.get_historic_ohlcv", return_value=ohlcv_history_list)
+    mocker.patch(f"{EXMS}.get_historic_ohlcv", return_value=ohlcv_history)
     exchange = get_patched_exchange(mocker, default_conf)
     file1_1 = tmp_path / f"{subdir}MEME_BTC-1m{file_tail}.feather"
     file1_5 = tmp_path / f"{subdir}MEME_BTC-5m{file_tail}.feather"
@@ -353,16 +351,12 @@ def test_download_pair_history(
     assert file2_5.is_file()
 
 
-def test_download_pair_history2(mocker, default_conf, testdatadir) -> None:
-    tick = [
-        [1509836520000, 0.00162008, 0.00162008, 0.00162008, 0.00162008, 108.14853839],
-        [1509836580000, 0.00161, 0.00161, 0.00161, 0.00161, 82.390199],
-    ]
+def test_download_pair_history2(mocker, default_conf, testdatadir, ohlcv_history) -> None:
     json_dump_mock = mocker.patch(
         "freqtrade.data.history.datahandlers.featherdatahandler.FeatherDataHandler.ohlcv_store",
         return_value=None,
     )
-    mocker.patch(f"{EXMS}.get_historic_ohlcv", return_value=tick)
+    mocker.patch(f"{EXMS}.get_historic_ohlcv", return_value=ohlcv_history)
     exchange = get_patched_exchange(mocker, default_conf)
     _download_pair_history(
         datadir=testdatadir,
@@ -555,7 +549,7 @@ def test_refresh_backtest_ohlcv_data(
     mocker.patch.object(Path, "unlink", MagicMock())
     default_conf["trading_mode"] = trademode
 
-    ex = get_patched_exchange(mocker, default_conf, id="bybit")
+    ex = get_patched_exchange(mocker, default_conf, exchange="bybit")
     timerange = TimeRange.parse_timerange("20190101-20190102")
     refresh_backtest_ohlcv_data(
         exchange=ex,
@@ -677,7 +671,7 @@ def test_download_trades_history(
     assert not _download_trades_history(
         data_handler=data_handler, exchange=exchange, pair="ETH/BTC", trading_mode=TradingMode.SPOT
     )
-    assert log_has_re('Failed to download historic trades for pair: "ETH/BTC".*', caplog)
+    assert log_has_re('Failed to download and store historic trades for pair: "ETH/BTC".*', caplog)
 
     file2 = tmp_path / "XRP_ETH-trades.json.gz"
     copyfile(testdatadir / file2.name, file2)

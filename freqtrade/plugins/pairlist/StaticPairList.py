@@ -8,8 +8,8 @@ import logging
 from copy import deepcopy
 from typing import Dict, List
 
-from freqtrade.exchange.types import Tickers
-from freqtrade.plugins.pairlist.IPairList import IPairList, PairlistParameter
+from freqtrade.exchange.exchange_types import Tickers
+from freqtrade.plugins.pairlist.IPairList import IPairList, PairlistParameter, SupportsBacktesting
 
 
 logger = logging.getLogger(__name__)
@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 class StaticPairList(IPairList):
     is_pairlist_generator = True
+    supports_backtesting = SupportsBacktesting.YES
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -60,14 +61,15 @@ class StaticPairList(IPairList):
         :param tickers: Tickers (from exchange.get_tickers). May be cached.
         :return: List of pairs
         """
+        wl = self.verify_whitelist(
+            self._config["exchange"]["pair_whitelist"], logger.info, keep_invalid=True
+        )
         if self._allow_inactive:
-            return self.verify_whitelist(
-                self._config["exchange"]["pair_whitelist"], logger.info, keep_invalid=True
-            )
+            return wl
         else:
-            return self._whitelist_for_active_markets(
-                self.verify_whitelist(self._config["exchange"]["pair_whitelist"], logger.info)
-            )
+            # Avoid implicit filtering of "verify_whitelist" to keep
+            # proper warnings in the log
+            return self._whitelist_for_active_markets(wl)
 
     def filter_pairlist(self, pairlist: List[str], tickers: Tickers) -> List[str]:
         """

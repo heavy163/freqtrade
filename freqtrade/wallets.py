@@ -29,7 +29,7 @@ class Wallet(NamedTuple):
 class PositionWallet(NamedTuple):
     symbol: str
     position: float = 0
-    leverage: float = 0
+    leverage: Optional[float] = 0  # Don't use this - it's not guaranteed to be set
     collateral: float = 0
     side: str = "long"
 
@@ -66,6 +66,17 @@ class Wallets:
         else:
             return 0
 
+    def get_owned(self, pair: str, base_currency: str) -> float:
+        """
+        Get currently owned value.
+        Designed to work across both spot and futures.
+        """
+        if self._config.get("trading_mode", "spot") != TradingMode.FUTURES:
+            return self.get_total(base_currency) or 0
+        if pos := self._positions.get(pair):
+            return pos.position
+        return 0
+
     def _update_dry(self) -> None:
         """
         Update from database in dry-run mode
@@ -82,17 +93,27 @@ class Wallets:
             tot_profit = Trade.get_total_closed_profit()
         else:
             # Backtest mode
-            tot_profit = LocalTrade.total_profit
+            tot_profit = LocalTrade.bt_total_profit
         tot_profit += sum(trade.realized_profit for trade in open_trades)
         tot_in_trades = sum(trade.stake_amount for trade in open_trades)
         used_stake = 0.0
 
         if self._config.get("trading_mode", "spot") != TradingMode.FUTURES:
-            current_stake = self.start_cap + tot_profit - tot_in_trades
-            total_stake = current_stake
             for trade in open_trades:
                 curr = self._exchange.get_pair_base_currency(trade.pair)
-                _wallets[curr] = Wallet(curr, trade.amount, 0, trade.amount)
+                used_stake += sum(
+                    o.stake_amount for o in trade.open_orders if o.ft_order_side == trade.entry_side
+                )
+                pending = sum(
+                    o.amount
+                    for o in trade.open_orders
+                    if o.amount and o.ft_order_side == trade.exit_side
+                )
+
+                _wallets[curr] = Wallet(curr, trade.amount - pending, pending, trade.amount)
+
+            current_stake = self.start_cap + tot_profit - tot_in_trades
+            total_stake = current_stake + used_stake
         else:
             tot_in_trades = 0
             for position in open_trades:
@@ -128,9 +149,9 @@ class Wallets:
             if isinstance(balances[currency], dict):
                 self._wallets[currency] = Wallet(
                     currency,
-                    balances[currency].get("free"),
-                    balances[currency].get("used"),
-                    balances[currency].get("total"),
+                    balances[currency].get("free", 0),
+                    balances[currency].get("used", 0),
+                    balances[currency].get("total", 0),
                 )
         # Remove currencies no longer in get_balances output
         for currency in deepcopy(self._wallets):
@@ -138,7 +159,7 @@ class Wallets:
                 del self._wallets[currency]
 
         positions = self._exchange.fetch_positions()
-        self._positions = {}
+        _parsed_positions = {}
         for position in positions:
             symbol = position["symbol"]
             if position["side"] is None or position["collateral"] == 0.0:
@@ -146,14 +167,15 @@ class Wallets:
                 continue
             size = self._exchange._contracts_to_amount(symbol, position["contracts"])
             collateral = safe_value_fallback(position, "collateral", "initialMargin", 0.0)
-            leverage = position["leverage"]
-            self._positions[symbol] = PositionWallet(
+            leverage = position.get("leverage")
+            _parsed_positions[symbol] = PositionWallet(
                 symbol,
                 position=size,
                 leverage=leverage,
                 collateral=collateral,
                 side=position["side"],
             )
+        self._positions = _parsed_positions
 
     def update(self, require_update: bool = True) -> None:
         """

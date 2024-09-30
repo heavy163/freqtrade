@@ -69,7 +69,6 @@ class StrategyResolver(IResolver):
             ("order_time_in_force", None),
             ("stake_currency", None),
             ("stake_amount", None),
-            ("protections", None),
             ("startup_candle_count", None),
             ("unfilledtimeout", None),
             ("use_exit_signal", True),
@@ -311,9 +310,9 @@ def warn_deprecated_setting(strategy: IStrategy, old: str, new: str, error=False
         setattr(strategy, new, getattr(strategy, f"{old}"))
 
 
-def check_override(object, parentclass, attribute):
+def check_override(obj, parentclass, attribute: str):
     """
     Checks if a object overrides the parent class attribute.
     :returns: True if the object is overridden.
     """
-    return getattr(type(object), attribute) != getattr(parentclass, attribute)
+    return getattr(type(obj), attribute) != getattr(parentclass, attribute)
