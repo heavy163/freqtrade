@@ -8,7 +8,7 @@ import logging  # noqa: I001
 from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from numpy import nan
 from pandas import DataFrame
@@ -26,6 +26,7 @@ from freqtrade.enums import (
     CandleType,
     ExitCheckTuple,
     ExitType,
+    MarginMode,
     RunMode,
     TradingMode,
 )
@@ -37,6 +38,7 @@ from freqtrade.exchange import (
 )
 from freqtrade.exchange.exchange import Exchange
 from freqtrade.ft_types import BacktestResultType, get_BacktestResultType_default
+from freqtrade.leverage.liquidation_price import update_liquidation_prices
 from freqtrade.mixins import LoggingMixin
 from freqtrade.optimize.backtest_caching import get_strategy_run_id
 from freqtrade.optimize.bt_progress import BTProgress
@@ -120,13 +122,13 @@ class Backtesting:
         self.order_id_counter: int = 0
 
         config["dry_run"] = True
-        self.run_ids: Dict[str, str] = {}
-        self.strategylist: List[IStrategy] = []
-        self.all_results: Dict[str, Dict] = {}
-        self.processed_dfs: Dict[str, Dict] = {}
-        self.rejected_dict: Dict[str, List] = {}
-        self.rejected_df: Dict[str, Dict] = {}
-        self.exited_dfs: Dict[str, Dict] = {}
+        self.run_ids: dict[str, str] = {}
+        self.strategylist: list[IStrategy] = []
+        self.all_results: dict[str, dict] = {}
+        self.processed_dfs: dict[str, dict] = {}
+        self.rejected_dict: dict[str, list] = {}
+        self.rejected_df: dict[str, dict] = {}
+        self.exited_dfs: dict[str, dict] = {}
 
         self._exchange_name = self.config["exchange"]["name"]
         if not exchange:
@@ -210,6 +212,7 @@ class Backtesting:
             self.required_startup = self.dataprovider.get_required_startup(self.timeframe)
 
         self.trading_mode: TradingMode = config.get("trading_mode", TradingMode.SPOT)
+        self.margin_mode: MarginMode = config.get("margin_mode", MarginMode.ISOLATED)
         # strategies which define "can_short=True" will fail to load in Spot mode.
         self._can_short = self.trading_mode != TradingMode.SPOT
         self._position_stacking: bool = self.config.get("position_stacking", False)
@@ -247,8 +250,8 @@ class Backtesting:
 
         else:
             self.timeframe_detail_td = timedelta(seconds=0)
-        self.detail_data: Dict[str, DataFrame] = {}
-        self.futures_data: Dict[str, DataFrame] = {}
+        self.detail_data: dict[str, DataFrame] = {}
+        self.futures_data: dict[str, DataFrame] = {}
 
     def init_backtest(self):
         self.prepare_backtest(False)
@@ -279,7 +282,7 @@ class Backtesting:
         if self.config.get("enable_protections", False):
             self.protections = ProtectionManager(self.config, strategy.protections)
 
-    def load_bt_data(self) -> Tuple[Dict[str, DataFrame], TimeRange]:
+    def load_bt_data(self) -> tuple[dict[str, DataFrame], TimeRange]:
         """
         Loads backtest data and returns the data combined with the timerange
         as tuple.
@@ -382,8 +385,6 @@ class Backtesting:
         else:
             self.futures_data = {}
 
-        self.dataprovider._bt_future_data = self.futures_data
-
     def disable_database_use(self):
         disable_database_use(self.timeframe)
 
@@ -414,7 +415,7 @@ class Backtesting:
             self.abort = False
             raise DependencyException("Stop requested")
 
-    def _get_ohlcv_as_lists(self, processed: Dict[str, DataFrame]) -> Dict[str, Tuple]:
+    def _get_ohlcv_as_lists(self, processed: dict[str, DataFrame]) -> dict[str, tuple]:
         """
         Helper function to convert a processed dataframes into lists for performance reasons.
 
@@ -424,7 +425,7 @@ class Backtesting:
         optimize memory usage!
         """
 
-        data: Dict = {}
+        data: dict = {}
         self.progress.init_step(BacktestState.CONVERT, len(processed))
 
         # Create dict with data
@@ -473,7 +474,7 @@ class Backtesting:
         return data
 
     def _get_close_rate(
-        self, row: Tuple, trade: LocalTrade, exit_: ExitCheckTuple, trade_dur: int
+        self, row: tuple, trade: LocalTrade, exit_: ExitCheckTuple, trade_dur: int
     ) -> float:
         """
         Get close rate for backtesting result
@@ -491,7 +492,7 @@ class Backtesting:
             return row[OPEN_IDX]
 
     def _get_close_rate_for_stoploss(
-        self, row: Tuple, trade: LocalTrade, exit_: ExitCheckTuple, trade_dur: int
+        self, row: tuple, trade: LocalTrade, exit_: ExitCheckTuple, trade_dur: int
     ) -> float:
         # our stoploss was already lower than candle high,
         # possibly due to a cancelled trade exit.
@@ -545,7 +546,7 @@ class Backtesting:
         return stoploss_value
 
     def _get_close_rate_for_roi(
-        self, row: Tuple, trade: LocalTrade, exit_: ExitCheckTuple, trade_dur: int
+        self, row: tuple, trade: LocalTrade, exit_: ExitCheckTuple, trade_dur: int
     ) -> float:
         is_short = trade.is_short or False
         leverage = trade.leverage or 1.0
@@ -608,7 +609,7 @@ class Backtesting:
             return row[OPEN_IDX]
 
     def _get_adjust_trade_entry_for_candle(
-        self, trade: LocalTrade, row: Tuple, current_time: datetime
+        self, trade: LocalTrade, row: tuple, current_time: datetime
     ) -> LocalTrade:
         current_rate: float = row[OPEN_IDX]
         current_profit = trade.calc_profit_ratio(current_rate)
@@ -676,7 +677,7 @@ class Backtesting:
 
         return trade
 
-    def _get_order_filled(self, rate: float, row: Tuple) -> bool:
+    def _get_order_filled(self, rate: float, row: tuple) -> bool:
         """Rate is within candle, therefore filled"""
         return row[LOW_IDX] <= rate <= row[HIGH_IDX]
 
@@ -692,7 +693,7 @@ class Backtesting:
         )
 
     def _try_close_open_order(
-        self, order: Optional[Order], trade: LocalTrade, current_date: datetime, row: Tuple
+        self, order: Optional[Order], trade: LocalTrade, current_date: datetime, row: tuple
     ) -> bool:
         """
         Check if an order is open and if it should've filled.
@@ -708,26 +709,25 @@ class Backtesting:
                 current_time=current_date,
             )
 
-            if not (order.ft_order_side == trade.exit_side and order.safe_amount == trade.amount):
-                # trade is still open
-                trade.set_liquidation_price(
-                    self.exchange.get_liquidation_price(
-                        pair=trade.pair,
-                        open_rate=trade.open_rate,
-                        is_short=trade.is_short,
-                        amount=trade.amount,
-                        stake_amount=trade.stake_amount,
-                        leverage=trade.leverage,
-                        wallet_balance=trade.stake_amount,
-                    )
+            if self.margin_mode == MarginMode.CROSS or not (
+                order.ft_order_side == trade.exit_side and order.safe_amount == trade.amount
+            ):
+                # trade is still open or we are in cross margin mode and
+                # must update all liquidation prices
+                update_liquidation_prices(
+                    trade,
+                    exchange=self.exchange,
+                    wallets=self.wallets,
+                    stake_currency=self.config["stake_currency"],
+                    dry_run=self.config["dry_run"],
                 )
+            if not (order.ft_order_side == trade.exit_side and order.safe_amount == trade.amount):
                 self._call_adjust_stop(current_date, trade, order.ft_price)
-                # pass
             return True
         return False
 
     def _process_exit_order(
-        self, order: Order, trade: LocalTrade, current_time: datetime, row: Tuple, pair: str
+        self, order: Order, trade: LocalTrade, current_time: datetime, row: tuple, pair: str
     ):
         """
         Takes an exit order and processes it, potentially closing the trade.
@@ -748,7 +748,7 @@ class Backtesting:
     def _get_exit_for_signal(
         self,
         trade: LocalTrade,
-        row: Tuple,
+        row: tuple,
         exit_: ExitCheckTuple,
         current_time: datetime,
         amount: Optional[float] = None,
@@ -828,7 +828,7 @@ class Backtesting:
     def _exit_trade(
         self,
         trade: LocalTrade,
-        sell_row: Tuple,
+        sell_row: tuple,
         close_rate: float,
         amount: float,
         exit_reason: Optional[str],
@@ -867,7 +867,7 @@ class Backtesting:
         return trade
 
     def _check_trade_exit(
-        self, trade: LocalTrade, row: Tuple, current_time: datetime
+        self, trade: LocalTrade, row: tuple, current_time: datetime
     ) -> Optional[LocalTrade]:
         debug.callback(
             __package__,
@@ -930,7 +930,7 @@ class Backtesting:
     def get_valid_price_and_stake(
         self,
         pair: str,
-        row: Tuple,
+        row: tuple,
         propose_rate: float,
         stake_amount: float,
         direction: LongShort,
@@ -939,7 +939,7 @@ class Backtesting:
         trade: Optional[LocalTrade],
         order_type: str,
         price_precision: Optional[float],
-    ) -> Tuple[float, float, float, float]:
+    ) -> tuple[float, float, float, float]:
         if order_type == "limit":
             new_rate = strategy_safe_wrapper(
                 self.strategy.custom_entry_price, default_retval=propose_rate
@@ -1028,7 +1028,7 @@ class Backtesting:
     def _enter_trade(
         self,
         pair: str,
-        row: Tuple,
+        row: tuple,
         direction: LongShort,
         stake_amount: Optional[float] = None,
         trade: Optional[LocalTrade] = None,
@@ -1175,7 +1175,7 @@ class Backtesting:
         return trade
 
     def handle_left_open(
-        self, open_trades: Dict[str, List[LocalTrade]], data: Dict[str, List[Tuple]]
+        self, open_trades: dict[str, list[LocalTrade]], data: dict[str, list[tuple]]
     ) -> None:
         """
         Handling of left open trades at the end of backtesting
@@ -1222,7 +1222,7 @@ class Backtesting:
             self.protections.stop_per_pair(pair, current_time, side)
             self.protections.global_stop(current_time, side)
 
-    def manage_open_orders(self, trade: LocalTrade, current_time: datetime, row: Tuple) -> bool:
+    def manage_open_orders(self, trade: LocalTrade, current_time: datetime, row: tuple) -> bool:
         """
         Check if any open order needs to be cancelled or replaced.
         Returns True if the trade should be deleted.
@@ -1271,7 +1271,7 @@ class Backtesting:
         return None
 
     def check_order_replace(
-        self, trade: LocalTrade, order: Order, current_time, row: Tuple
+        self, trade: LocalTrade, order: Order, current_time, row: tuple
     ) -> bool:
         """
         Check if current analyzed entry order has to be replaced and do so.
@@ -1322,8 +1322,8 @@ class Backtesting:
         return False
 
     def validate_row(
-        self, data: Dict, pair: str, row_index: int, current_time: datetime
-    ) -> Optional[Tuple]:
+        self, data: dict, pair: str, row_index: int, current_time: datetime
+    ) -> Optional[tuple]:
         try:
             # Row is treated as "current incomplete candle".
             # entry / exit signals are shifted by 1 to compensate for this.
@@ -1354,7 +1354,7 @@ class Backtesting:
 
     def backtest_loop(
         self,
-        row: Tuple,
+        row: tuple,
         pair: str,
         current_time: datetime,
         end_date: datetime,
@@ -1408,7 +1408,7 @@ class Backtesting:
                 self._process_exit_order(order, trade, current_time, row, pair)
 
     def time_pair_generator(
-        self, start_date: datetime, end_date: datetime, increment: timedelta, pairs: List[str]
+        self, start_date: datetime, end_date: datetime, increment: timedelta, pairs: list[str]
     ):
         """
         Backtest time and pair generator
@@ -1429,7 +1429,7 @@ class Backtesting:
             self.progress.increment()
             current_time += increment
 
-    def backtest(self, processed: Dict, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
+    def backtest(self, processed: dict, start_date: datetime, end_date: datetime) -> dict[str, Any]:
         """
         Implement backtesting functionality
 
@@ -1448,10 +1448,10 @@ class Backtesting:
         self.wallets.update()
         # Use dict of lists with data for performance
         # (looping lists is a lot faster than pandas DataFrames)
-        data: Dict = self._get_ohlcv_as_lists(processed)
+        data: dict = self._get_ohlcv_as_lists(processed)
 
         # Indexes per pair, so some pairs are allowed to have a missing start.
-        indexes: Dict = defaultdict(int)
+        indexes: dict = defaultdict(int)
 
         # Loop timerange and get candle for each pair at that point in time
         for current_time, pair, is_first in self.time_pair_generator(
@@ -1537,7 +1537,7 @@ class Backtesting:
         }
 
     def backtest_one_strategy(
-        self, strat: IStrategy, data: Dict[str, DataFrame], timerange: TimeRange
+        self, strat: IStrategy, data: dict[str, DataFrame], timerange: TimeRange
     ):
         self.progress.init_step(BacktestState.ANALYZE, 0)
         strategy_name = strat.get_strategy_name()
@@ -1634,7 +1634,7 @@ class Backtesting:
         """
         Run backtesting end-to-end
         """
-        data: Dict[str, DataFrame] = {}
+        data: dict[str, DataFrame] = {}
 
         data, timerange = self.load_bt_data()
         self.load_bt_data_detail()

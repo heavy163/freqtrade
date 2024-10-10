@@ -13,14 +13,12 @@ authors = [
 
 description = "Freqtrade - Crypto Trading Bot"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = {text = "GPLv3"}
-# license = "GPLv3"
 classifiers = [
     "Environment :: Console",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -122,10 +120,9 @@ ignore = ["freqtrade/vendor/**"]
 [tool.ruff]
 line-length = 100
 extend-exclude = [".env", ".venv"]
-target-version = "py38"
+target-version = "py39"
 
 [tool.ruff.lint]
-# Exclude UP036 as it's causing the "exit if < 3.9" to fail.
 extend-select = [
   "C90",    # mccabe
   "B",      # bugbear
