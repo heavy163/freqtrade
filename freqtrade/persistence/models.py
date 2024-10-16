@@ -2,7 +2,7 @@
 This module contains the class to persist trades into SQLite
 """
 
-import logging
+import logging  # noqa: I001
 import threading
 from contextvars import ContextVar
 from typing import Any, Final, Optional
@@ -19,7 +19,7 @@ from freqtrade.persistence.key_value_store import _KeyValueStoreModel
 from freqtrade.persistence.migrations import check_migrate
 from freqtrade.persistence.pairlock import PairLock
 from freqtrade.persistence.trade_model import Order, Trade
-
+from freqtrade.persistence.trade_model_ext import FtPrediction, FtPostion, FtPostionRecords
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +87,11 @@ def init_db(db_url: str) -> None:
     )
     Order.session = Trade.session
     PairLock.session = Trade.session
+    FtPostion.session = Trade.session
+    FtPrediction.session = scoped_session(
+        sessionmaker(bind=engine, autoflush=True), scopefunc=get_request_or_thread_id
+    )
+    FtPostionRecords.session = FtPostion.session
     _KeyValueStoreModel.session = Trade.session
     _CustomData.session = scoped_session(
         sessionmaker(bind=engine, autoflush=True), scopefunc=get_request_or_thread_id

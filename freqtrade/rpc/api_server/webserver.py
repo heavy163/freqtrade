@@ -113,7 +113,7 @@ class ApiServer(RPCHandler):
         )
 
     def configure_app(self, app: FastAPI, config):
-        from freqtrade.rpc.api_server.api_auth import http_basic_or_jwt_token, router_login
+        from freqtrade.rpc.api_server.api_auth import http_basic_or_jwt_token, router_login  # noqa: I001
         from freqtrade.rpc.api_server.api_background_tasks import router as api_bg_tasks
         from freqtrade.rpc.api_server.api_backtest import router as api_backtest
         from freqtrade.rpc.api_server.api_v1 import router as api_v1
@@ -121,6 +121,7 @@ class ApiServer(RPCHandler):
         from freqtrade.rpc.api_server.api_ws import router as ws_router
         from freqtrade.rpc.api_server.deps import is_webserver_mode
         from freqtrade.rpc.api_server.web_ui import router_ui
+        from freqtrade.rpc.api_server.api_ext import router as api_ext
 
         app.include_router(api_v1_public, prefix="/api/v1")
 
@@ -140,6 +141,7 @@ class ApiServer(RPCHandler):
             prefix="/api/v1",
             dependencies=[Depends(http_basic_or_jwt_token), Depends(is_webserver_mode)],
         )
+        app.include_router(api_ext, prefix="/api/ext", dependencies=[Depends(http_basic_or_jwt_token)])
         app.include_router(ws_router, prefix="/api/v1")
         # UI Router MUST be last!
         app.include_router(router_ui, prefix="")

@@ -590,3 +590,76 @@ class Health(BaseModel):
     bot_start_ts: Optional[int] = None
     bot_startup: Optional[datetime] = None
     bot_startup_ts: Optional[int] = None
+
+
+class FtPredictionSchema(BaseModel):
+    close_time: datetime
+    pair: str
+    model: str
+    model_name: str
+    y_pred: float
+    train_start: Optional[datetime] = None
+    train_end: Optional[datetime] = None
+    rank_start: Optional[datetime] = None
+    rank_end: Optional[datetime] = None
+    rank_ls_rtn: Optional[float] = None
+    rank_sharpe: Optional[float] = None
+
+    @staticmethod
+    def data_columns():
+        return [
+            "close_time",
+            "pair",
+            "model",
+            "model_name",
+            "y_pred",
+            "train_start",
+            "train_end",
+            "rank_start",
+            "rank_end",
+            "rank_ls_rtn",
+            "rank_sharpe",
+        ]
+
+    def to_row(self):
+        return [
+            self.close_time,
+            self.pair,
+            self.model,
+            self.model_name,
+            self.y_pred,
+            self.train_start,
+            self.train_end,
+            self.rank_start,
+            self.rank_end,
+            self.rank_ls_rtn,
+            self.rank_sharpe,
+        ]
+
+
+class FtPostionSchema(BaseModel):
+    pair: str
+    strategy_id: int
+    side: Optional[str] = None
+    stake_amount: Optional[float] = None
+    filled_stake_amount: Optional[float] = None
+    open_date: Optional[datetime] = None
+    open_price: Optional[float] = None
+    close_reason: Optional[str] = None
+    close_price: Optional[float] = None
+    group: Optional[int] = None
+    status: Optional[str] = None
+    refreshed_date: Optional[datetime] = None
+    y_pred_scaled: Optional[float] = None
+    refreshed_count: Optional[int] = None
+    prediction_refreshed_date: Optional[datetime] = None
+    latest_close: Optional[float] = None
+    latest_high: Optional[float] = None
+    latest_low: Optional[float] = None
+
+
+class CommonResponse(BaseModel):
+    code: int = 0
+    message: Optional[str] = None
+    data: Optional[str] = None
+

@@ -2,13 +2,15 @@
 This module contains class to define a RPC communications
 """
 
-import logging
+import logging  # noqa: I001
 from abc import abstractmethod
 from collections.abc import Generator, Sequence
 from datetime import date, datetime, timedelta, timezone
 from math import isnan
 from typing import Any, Optional, Union
 
+import pandas as pd
+import polars as pl
 import psutil
 from dateutil.relativedelta import relativedelta
 from dateutil.tz import tzlocal
@@ -34,8 +36,9 @@ from freqtrade.exceptions import ExchangeError, PricingError
 from freqtrade.exchange import timeframe_to_minutes, timeframe_to_msecs
 from freqtrade.exchange.exchange_types import Tickers
 from freqtrade.loggers import bufferHandler
-from freqtrade.persistence import KeyStoreKeys, KeyValueStore, PairLocks, Trade
+from freqtrade.persistence import KeyStoreKeys, KeyValueStore, PairLocks, Trade, dbhelper
 from freqtrade.persistence.models import PairLock
+from freqtrade.persistence.trade_model_ext import FtPostion, FtPostionRecords, FtPrediction
 from freqtrade.plugins.pairlist.pairlist_helpers import expand_pairlist
 from freqtrade.rpc.fiat_convert import CryptoToFiatConverter
 from freqtrade.rpc.rpc_types import RPCSendMsg
@@ -1529,3 +1532,104 @@ class RPC:
 
     def _get_market_direction(self) -> MarketDirection:
         return self._freqtrade.strategy.market_direction
+
+    def _insert_predictions(self, prediction_df: pd.DataFrame) -> int:
+        if prediction_df is not None and len(prediction_df) > 0:
+            model = prediction_df.iloc[0]["model"]
+            prediction_df = prediction_df[prediction_df["model"] == model]
+            last_record_filters = [
+                FtPrediction.model == model,
+            ]
+            if len(prediction_df) > 0:
+                rows = dbhelper.save_to_db(
+                    FtPrediction.session,
+                    FtPrediction,
+                    prediction_df,
+                    last_record_filters,
+                    datetime_col=FtPrediction.close_time,
+                    unique_cols=["pair", "close_time"],
+                )
+                return rows
+        return -1
+
+    def _get_current_positions(self, strategy: str = None, strategy_id: int = None) -> str:
+        filters = []
+        if strategy is not None:
+            filters.append(FtPostionRecords.strategy == strategy)
+        if strategy_id is not None:
+            filters.append(FtPostionRecords.strategy_id == strategy_id)
+        posistion_df: pd.DataFrame = dbhelper.read_table(FtPostion.session, FtPostion, filters=[])
+        if len(posistion_df) > 0:
+            return posistion_df.to_dict(orient="records")
+        else:
+            return []
+
+    def get_latest_prediction(
+        self, model: str = None, model_name: str = None, pair: str = None
+    ) -> list[dict]:
+        filters = []
+        if model is not None:
+            filters.append(
+                FtPrediction.model == model,
+            )
+        if model_name is not None:
+            filters.append(
+                FtPrediction.model_name == model_name,
+            )
+        if pair is not None:
+            filters.append(FtPrediction.pair == pair)
+        prediction = dbhelper.get_latest_record(
+            FtPrediction.session,
+            FtPrediction,
+            FtPrediction.close_time,
+            filters,
+            return_dataframe=True,
+        )
+        if len(prediction) > 0:
+            return prediction.to_dict(orient="records")
+        return []
+
+    def get_latest_position_record(
+        self, strategy: str, strategy_id: int, pair: str = None
+    ) -> list[dict]:
+        filters = [
+            FtPostionRecords.strategy == strategy,
+            FtPostionRecords.strategy_id == strategy_id,
+        ]
+        if pair is not None:
+            filters.append(FtPostionRecords.pair == pair)
+        record = dbhelper.get_latest_record(
+            FtPostionRecords.session,
+            FtPostionRecords,
+            FtPostionRecords.refreshed_date,
+            filters,
+            return_dataframe=True,
+        )
+        if len(record) > 0:
+            return record.to_dict(orient="records")
+        else:
+            return []
+
+    def _get_position_records(
+        self,
+        strategy: str = None,
+        strategy_id: int = None,
+        start: datetime = None,
+        end: datetime = None,
+    ) -> list[dict]:
+        filters = []
+        if strategy is not None:
+            filters.append(FtPostionRecords.strategy == strategy)
+        if strategy_id is not None:
+            filters.append(FtPostionRecords.strategy_id == strategy_id)
+        if start is not None:
+            filters.append(FtPostionRecords.refreshed_date >= start)
+        if end is not None:
+            filters.append(FtPostionRecords.refreshed_date <= end)
+        posistion_df: pd.DataFrame = dbhelper.read_table(
+            FtPostionRecords.session, FtPostionRecords, filters=filters
+        )
+        if len(posistion_df) > 0:
+            return posistion_df.to_dict(orient="records")
+        else:
+            return []
