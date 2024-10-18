@@ -56,6 +56,7 @@ from freqtrade.persistence import (
     Order,
     PairLocks,
     Trade,
+    init_db,
     disable_database_use,
     enable_database_use,
 )
@@ -162,6 +163,7 @@ class Backtesting:
         self.timeframe_secs = timeframe_to_seconds(self.timeframe)
         self.timeframe_min = self.timeframe_secs // 60
         self.timeframe_td = timedelta(seconds=self.timeframe_secs)
+        init_db(self.config["db_url"])
         self.disable_database_use()
         self.init_backtest_detail()
         self.pairlists = PairListManager(self.exchange, self.config, self.dataprovider)
