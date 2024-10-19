@@ -639,6 +639,7 @@ class FtPredictionSchema(BaseModel):
 
 class FtPostionSchema(BaseModel):
     pair: str
+    strategy: str
     strategy_id: int
     side: Optional[str] = None
     stake_amount: Optional[float] = None

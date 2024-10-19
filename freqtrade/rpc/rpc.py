@@ -1555,10 +1555,12 @@ class RPC:
     def _get_current_positions(self, strategy: str = None, strategy_id: int = None) -> str:
         filters = []
         if strategy is not None:
-            filters.append(FtPostionRecords.strategy == strategy)
+            filters.append(FtPostion.strategy == strategy)
         if strategy_id is not None:
-            filters.append(FtPostionRecords.strategy_id == strategy_id)
-        posistion_df: pd.DataFrame = dbhelper.read_table(FtPostion.session, FtPostion, filters=[])
+            filters.append(FtPostion.strategy_id == strategy_id)
+        posistion_df: pd.DataFrame = dbhelper.read_table(
+            FtPostion.session, FtPostion, filters=filters
+        )
         if len(posistion_df) > 0:
             return posistion_df.to_dict(orient="records")
         else:
@@ -1592,10 +1594,11 @@ class RPC:
     def get_latest_position_record(
         self, strategy: str, strategy_id: int, pair: str = None
     ) -> list[dict]:
-        filters = [
-            FtPostionRecords.strategy == strategy,
-            FtPostionRecords.strategy_id == strategy_id,
-        ]
+        filters = []
+        if strategy is not None:
+            filters.append(FtPostionRecords.strategy == strategy)
+        if strategy_id is not None:
+            filters.append(FtPostionRecords.strategy_id == strategy_id)
         if pair is not None:
             filters.append(FtPostionRecords.pair == pair)
         record = dbhelper.get_latest_record(
