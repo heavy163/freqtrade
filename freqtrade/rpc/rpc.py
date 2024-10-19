@@ -45,7 +45,7 @@ from freqtrade.rpc.rpc_types import RPCSendMsg
 from freqtrade.util import decimals_per_coin, dt_now, dt_ts_def, format_date, shorten_date
 from freqtrade.util.datetime_helpers import dt_humanize_delta
 from freqtrade.wallets import PositionWallet, Wallet
-
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -1558,13 +1558,14 @@ class RPC:
             filters.append(FtPostion.strategy == strategy)
         if strategy_id is not None:
             filters.append(FtPostion.strategy_id == strategy_id)
-        posistion_df: pd.DataFrame = dbhelper.read_table(
-            FtPostion.session, FtPostion, filters=filters
+        positions: list[FtPostion] = dbhelper.read_table(
+            FtPostion.session, FtPostion, filters=filters, return_dataframe=False
         )
-        if len(posistion_df) > 0:
-            return posistion_df.to_dict(orient="records")
-        else:
-            return []
+        result_list = []
+        if positions is not None:
+            for p in positions:
+                result_list.append(p.to_json())
+        return result_list
 
     def get_latest_prediction(
         self, model: str = None, model_name: str = None, pair: str = None
@@ -1629,10 +1630,11 @@ class RPC:
             filters.append(FtPostionRecords.refreshed_date >= start)
         if end is not None:
             filters.append(FtPostionRecords.refreshed_date <= end)
-        posistion_df: pd.DataFrame = dbhelper.read_table(
-            FtPostionRecords.session, FtPostionRecords, filters=filters
+        posistion_records: list[FtPostionRecords] = dbhelper.read_table(
+            FtPostionRecords.session, FtPostionRecords, filters=filters, return_dataframe=False
         )
-        if len(posistion_df) > 0:
-            return posistion_df.to_dict(orient="records")
-        else:
-            return []
+        result_list = []
+        if posistion_records is not None:
+            for p in posistion_records:
+                result_list.append(p.to_json())
+        return result_list

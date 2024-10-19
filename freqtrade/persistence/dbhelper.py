@@ -17,6 +17,7 @@ def read_table(
     end_date: datetime = None,
     filters=None,
     datetime_col: MappedColumn = None,
+    return_dataframe = True,
 ) -> pd.DataFrame:
     query: Query = session.query(table)
     if start_date is not None:
@@ -28,8 +29,10 @@ def read_table(
             filters = [filters]
         for f in filters:
             query = query.filter(f)
-        df = pd.read_sql(query.statement, session.connection())
-    return df
+    if return_dataframe:
+        return pd.read_sql(query.statement, session.connection())
+    else:
+        return query.all()
 
 
 def get_latest_record(

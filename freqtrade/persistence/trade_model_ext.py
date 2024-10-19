@@ -94,6 +94,30 @@ class FtPostion(ModelBase):
     def rollback():
         FtPostion.session.rollback()
 
+    def to_json(self):
+        return {
+            "id": self.id,
+            "pair": self.pair,
+            "strategy": self.strategy,
+            "strategy_id": self.strategy_id,
+            "side": self.side,
+            "stake_amount": self.stake_amount,
+            "filled_stake_amount": self.filled_stake_amount,
+            "open_date": self.open_date,
+            "open_price": self.open_price,
+            "close_reason": self.close_reason,
+            "close_price": self.close_price,
+            "group": self.group,
+            "status": self.status,
+            "refreshed_date": self.refreshed_date,
+            "y_pred_scaled": self.y_pred_scaled,
+            "refreshed_count": self.refreshed_count,
+            "prediction_refreshed_date": self.prediction_refreshed_date,
+            "latest_close": self.latest_close,
+            "latest_high": self.latest_high,
+            "latest_low": self.latest_low,
+        }
+
 
 class FtPostionRecords(ModelBase):
     """
@@ -125,3 +149,28 @@ class FtPostionRecords(ModelBase):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "pair": self.pair,
+            "strategy": self.strategy,
+            "strategy_id": self.strategy_id,
+            "side": self.side,
+            "stake_amount": self.stake_amount,
+            "filled_stake_amount": self.filled_stake_amount,
+            "open_date": self.open_date,
+            "open_price": self.open_price,
+            "close_reason": self.close_reason,
+            "close_price": self.close_price,
+            "group": self.group,
+            "status": self.status,
+            "refreshed_date": self.refreshed_date,
+            "y_pred_scaled": self.y_pred_scaled,
+            "refreshed_count": self.refreshed_count,
+            "prediction_refreshed_date": self.prediction_refreshed_date,
+            "latest_close": self.latest_close,
+            "latest_high": self.latest_high,
+            "latest_low": self.latest_low,
+        }
