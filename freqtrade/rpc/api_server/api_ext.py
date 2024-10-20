@@ -76,3 +76,13 @@ def get_latest_position_record(
 ):
     """Get latest position records"""
     return rpc.get_latest_position_record(strategy, strategy_id, pair)
+
+@router.get("/strategy/data", tags=["strategy"])
+def get_strategy_data(
+    data_name: str,
+    data_query_args: dict = None,
+    rpc: RPC = Depends(get_rpc),
+):
+    if data_query_args is None:
+        data_query_args = {}
+    return rpc.get_strategy_data(data_name, **data_query_args)

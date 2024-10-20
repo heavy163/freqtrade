@@ -7,10 +7,9 @@ from abc import abstractmethod
 from collections.abc import Generator, Sequence
 from datetime import date, datetime, timedelta, timezone
 from math import isnan
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, Callable
 
 import pandas as pd
-import polars as pl
 import psutil
 from dateutil.relativedelta import relativedelta
 from dateutil.tz import tzlocal
@@ -45,7 +44,6 @@ from freqtrade.rpc.rpc_types import RPCSendMsg
 from freqtrade.util import decimals_per_coin, dt_now, dt_ts_def, format_date, shorten_date
 from freqtrade.util.datetime_helpers import dt_humanize_delta
 from freqtrade.wallets import PositionWallet, Wallet
-import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +99,7 @@ class RPC:
 
     # Bind _fiat_converter if needed
     _fiat_converter: Optional[CryptoToFiatConverter] = None
+    strategy_callbacks :dict[str: Callable] = {}
 
     def __init__(self, freqtrade) -> None:
         """
@@ -112,6 +111,9 @@ class RPC:
         self._config: Config = freqtrade.config
         if self._config.get("fiat_display_currency"):
             self._fiat_converter = CryptoToFiatConverter(self._config)
+
+    def register_strategy_data(self, data_name: str, callback: Callable):
+        self.strategy_callbacks[data_name] = callback
 
     @staticmethod
     def _rpc_show_config(
@@ -1638,3 +1640,11 @@ class RPC:
             for p in posistion_records:
                 result_list.append(p.to_json())
         return result_list
+
+    def get_strategy_data(self, data_name, **kwargs):
+        if data_name in self.strategy_callbacks.keys():
+            registerd_callable = self.strategy_callbacks[data_name]
+            dataframe: pd.DataFrame = registerd_callable(**kwargs)
+            if dataframe is not None:
+                return dataframe.to_json(orient="records")
+        return []
