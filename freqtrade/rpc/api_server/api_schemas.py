@@ -657,7 +657,13 @@ class FtPostionSchema(BaseModel):
     latest_close: Optional[float] = None
     latest_high: Optional[float] = None
     latest_low: Optional[float] = None
-
+    trade_id: Optional[int] = None
+    trade_side: Optional[str] = None
+    trade_stake_amount: Optional[float] = None
+    trade_value: Optional[float] = None
+    unbalance_time: Optional[datetime] = None
+    unbalance_state: Optional[str] = None
+    warn_state: Optional[str] = None
 
 class CommonResponse(BaseModel):
     code: int = 0

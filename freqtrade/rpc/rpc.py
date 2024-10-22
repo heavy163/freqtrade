@@ -37,7 +37,7 @@ from freqtrade.exchange.exchange_types import Tickers
 from freqtrade.loggers import bufferHandler
 from freqtrade.persistence import KeyStoreKeys, KeyValueStore, PairLocks, Trade, dbhelper
 from freqtrade.persistence.models import PairLock
-from freqtrade.persistence.trade_model_ext import FtPostion, FtPostionRecords, FtPrediction
+from freqtrade.persistence.trade_model_ext import FtPostion, FtPostionRecord, FtPrediction
 from freqtrade.plugins.pairlist.pairlist_helpers import expand_pairlist
 from freqtrade.rpc.fiat_convert import CryptoToFiatConverter
 from freqtrade.rpc.rpc_types import RPCSendMsg
@@ -1599,15 +1599,15 @@ class RPC:
     ) -> list[dict]:
         filters = []
         if strategy is not None:
-            filters.append(FtPostionRecords.strategy == strategy)
+            filters.append(FtPostionRecord.strategy == strategy)
         if strategy_id is not None:
-            filters.append(FtPostionRecords.strategy_id == strategy_id)
+            filters.append(FtPostionRecord.strategy_id == strategy_id)
         if pair is not None:
-            filters.append(FtPostionRecords.pair == pair)
+            filters.append(FtPostionRecord.pair == pair)
         record = dbhelper.get_latest_record(
-            FtPostionRecords.session,
-            FtPostionRecords,
-            FtPostionRecords.refreshed_date,
+            FtPostionRecord.session,
+            FtPostionRecord,
+            FtPostionRecord.refreshed_date,
             filters,
             return_dataframe=True,
         )
@@ -1625,15 +1625,15 @@ class RPC:
     ) -> list[dict]:
         filters = []
         if strategy is not None:
-            filters.append(FtPostionRecords.strategy == strategy)
+            filters.append(FtPostionRecord.strategy == strategy)
         if strategy_id is not None:
-            filters.append(FtPostionRecords.strategy_id == strategy_id)
+            filters.append(FtPostionRecord.strategy_id == strategy_id)
         if start is not None:
-            filters.append(FtPostionRecords.refreshed_date >= start)
+            filters.append(FtPostionRecord.refreshed_date >= start)
         if end is not None:
-            filters.append(FtPostionRecords.refreshed_date <= end)
-        posistion_records: list[FtPostionRecords] = dbhelper.read_table(
-            FtPostionRecords.session, FtPostionRecords, filters=filters, return_dataframe=False
+            filters.append(FtPostionRecord.refreshed_date <= end)
+        posistion_records: list[FtPostionRecord] = dbhelper.read_table(
+            FtPostionRecord.session, FtPostionRecord, filters=filters, return_dataframe=False
         )
         result_list = []
         if posistion_records is not None:
