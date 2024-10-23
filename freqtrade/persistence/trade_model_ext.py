@@ -84,6 +84,7 @@ class FtPostion(ModelBase):
     latest_low: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
     trade_id: Mapped[int] = mapped_column(Integer, nullable=True)
     trade_side: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    trade_leverage: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
     trade_stake_amount: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
     trade_value: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
     unbalance_time: Mapped[Optional[datetime]] = mapped_column(nullable=True)
@@ -125,6 +126,7 @@ class FtPostion(ModelBase):
             "latest_low": self.latest_low,
             "trade_id": self.trade_id,
             "trade_side": self.trade_side,
+            "trade_leverage": self.trade_leverage,
             "trade_stake_amount": self.trade_stake_amount,
             "trade_value": self.trade_value,
             "unbalance_time": self.unbalance_time,
@@ -162,6 +164,7 @@ class FtPostionRecord(ModelBase):
     latest_low: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
     trade_id: Mapped[int] = mapped_column(Integer, nullable=True)
     trade_side: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    trade_leverage: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
     trade_stake_amount: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
     trade_value: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
     unbalance_time: Mapped[Optional[datetime]] = mapped_column(nullable=True)
@@ -203,6 +206,7 @@ class FtPostionRecord(ModelBase):
             "latest_low": self.latest_low,
             "trade_id": self.trade_id,
             "trade_side": self.trade_side,
+            "trade_leverage": self.trade_leverage,
             "trade_stake_amount": self.trade_stake_amount,
             "trade_value": self.trade_value,
             "unbalance_time": self.unbalance_time,

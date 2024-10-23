@@ -659,6 +659,7 @@ class FtPostionSchema(BaseModel):
     latest_low: Optional[float] = None
     trade_id: Optional[int] = None
     trade_side: Optional[str] = None
+    trade_leverage: Optional[float] = None
     trade_stake_amount: Optional[float] = None
     trade_value: Optional[float] = None
     unbalance_time: Optional[datetime] = None
