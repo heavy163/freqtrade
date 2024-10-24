@@ -19,7 +19,12 @@ from freqtrade.persistence.key_value_store import _KeyValueStoreModel
 from freqtrade.persistence.migrations import check_migrate
 from freqtrade.persistence.pairlock import PairLock
 from freqtrade.persistence.trade_model import Order, Trade
-from freqtrade.persistence.trade_model_ext import FtPrediction, FtPostion, FtPostionRecord
+from freqtrade.persistence.trade_model_ext import (
+    FtPrediction,
+    FtPostion,
+    FtPostionRecord,
+    FtWalletRecord,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +96,7 @@ def init_db(db_url: str) -> None:
     FtPrediction.session = scoped_session(
         sessionmaker(bind=engine, autoflush=True), scopefunc=get_request_or_thread_id
     )
+    FtWalletRecord.session = FtPrediction.session
     FtPostionRecord.session = FtPostion.session
     _KeyValueStoreModel.session = Trade.session
     _CustomData.session = scoped_session(

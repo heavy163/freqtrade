@@ -15,6 +15,37 @@ from sqlalchemy.orm import Mapped, mapped_column
 from freqtrade.persistence.base import ModelBase, SessionType
 
 
+class FtWalletRecord(ModelBase):
+    """
+    Trade database model.
+    Also handles updating and querying trades
+
+    Note: Fields must be aligned with LocalPrediction class
+    """
+
+    __tablename__ = "ft_wallet_record"
+    session: ClassVar[SessionType]
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)  # type: ignore
+    close_time: Mapped[datetime] = mapped_column()
+    strategy: Mapped[str] = mapped_column(String(64))
+    account: Mapped[str] = mapped_column(String(64))
+    total: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
+    free: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
+    value: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def commit():
+        FtWalletRecord.session.commit()
+
+    @staticmethod
+    def rollback():
+        FtWalletRecord.session.rollback()
+
+
 class FtPrediction(ModelBase):
     """
     Trade database model.
