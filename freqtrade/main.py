@@ -24,7 +24,7 @@ from freqtrade.system import asyncio_setup, gc_set_threshold
 logger = logging.getLogger("freqtrade")
 
 
-def main(sysargv: Optional[list[str]] = None) -> None:
+def main(sysargv: Optional[list[str]] = None, exit_on_finish=True) -> int:
     """
     This function will initiate the bot and start the trading loop.
     :return: None
@@ -69,7 +69,10 @@ def main(sysargv: Optional[list[str]] = None) -> None:
     except Exception:
         logger.exception("Fatal exception!")
     finally:
-        sys.exit(return_code)
+        if exit_on_finish:
+            sys.exit(return_code)
+        else:
+            return return_code
 
 
 if __name__ == "__main__":  # pragma: no cover
