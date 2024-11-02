@@ -2490,6 +2490,7 @@ class Exchange:
             with self._loop_lock:
                 results = self.loop.run_until_complete(gather_coroutines(dl_jobs_batch))
 
+            logger.debug(f"refresh_latest_ohlcv result {len(results)}")
             for res in results:
                 if isinstance(res, Exception):
                     logger.warning(f"Async code raised an exception: {repr(res)}")
