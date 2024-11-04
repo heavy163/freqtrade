@@ -284,9 +284,11 @@ def _download_pair_history(
             candle_type=candle_type,
             until_ms=until_ms if until_ms else None,
         )
+        store = False
         if data.empty:
             data = new_dataframe
-        else:
+            store = True
+        elif len(new_dataframe) > 0:
             # Run cleaning again to ensure there were no duplicate candles
             # Especially between existing and new data.
             data = clean_ohlcv_dataframe(
@@ -296,7 +298,7 @@ def _download_pair_history(
                 fill_missing=False,
                 drop_incomplete=False,
             )
-
+            store = True
         logger.debug(
             "New Start: %s",
             f"{data.iloc[0]['date']:{DATETIME_PRINT_FORMAT}}" if not data.empty else "None",
@@ -305,8 +307,8 @@ def _download_pair_history(
             "New End: %s",
             f"{data.iloc[-1]['date']:{DATETIME_PRINT_FORMAT}}" if not data.empty else "None",
         )
-
-        data_handler.ohlcv_store(pair, timeframe, data=data, candle_type=candle_type)
+        if store:
+            data_handler.ohlcv_store(pair, timeframe, data=data, candle_type=candle_type)
         return True
 
     except Exception:
