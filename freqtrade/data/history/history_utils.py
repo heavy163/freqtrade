@@ -24,6 +24,7 @@ from freqtrade.data.history.datahandlers import IDataHandler, get_datahandler
 from freqtrade.enums import CandleType, TradingMode
 from freqtrade.exceptions import OperationalException
 from freqtrade.exchange import Exchange
+from freqtrade.exchange.exchange_utils import timeframe_to_minutes
 from freqtrade.plugins.pairlist.pairlist_helpers import dynamic_expand_pairlist
 from freqtrade.util import dt_now, dt_ts, format_ms_time, get_progress_tracker
 from freqtrade.util.migrations import migrate_data
@@ -254,7 +255,11 @@ def _download_pair_history(
             candle_type=candle_type,
             prepend=prepend,
         )
-
+        if (until_ms - since_ms) / 1000 / 60 < timeframe_to_minutes(timeframe):
+            logger.debug(
+                f"Ignore dowload {pair} history within {timerange} for data already exists."
+            )
+            return True
         logger.info(
             f'Download history data for "{pair}", {timeframe}, '
             f"{candle_type} and store in {datadir}. "
