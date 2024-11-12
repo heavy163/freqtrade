@@ -1,6 +1,6 @@
 import datetime as dtm
 from datetime import datetime
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 import pandas as pd
 from sqlalchemy import desc
@@ -12,18 +12,18 @@ from freqtrade.persistence.base import ModelBase, SessionType
 
 def read_table(
     session: SessionType,
-    table: ModelBase,
-    start_date: datetime = None,
-    end_date: datetime = None,
+    table: Any,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime]= None,
     filters=None,
-    datetime_col: MappedColumn = None,
+    datetime_col: Optional[MappedColumn] = None,
     return_dataframe = True,
-) -> pd.DataFrame:
-    query: Query = session.query(table)
+) -> Any:
+    query: Query = session.query(table)# type: ignore
     if start_date is not None:
-        query = query.filter(datetime_col >= start_date)
+        query = query.filter(datetime_col >= start_date) # type: ignore
     if end_date is not None:
-        query = query.filter(datetime_col <= end_date)
+        query = query.filter(datetime_col <= end_date)# type: ignore
     if filters is not None:
         if not isinstance(filters, list):
             filters = [filters]
@@ -37,12 +37,12 @@ def read_table(
 
 def get_latest_record(
     session: SessionType,
-    table: ModelBase,
-    datetime_col: MappedColumn = None,
+    table: Any,
+    datetime_col: Any,
     filters=None,
     return_dataframe=False,
 ) -> Union[pd.DataFrame, Any]:
-    query: Query = session.query(table)
+    query: Query = session.query(table) # type: ignore
     if filters is not None:
         if not isinstance(filters, list):
             filters = [filters]
@@ -58,9 +58,9 @@ def get_latest_record(
 def get_latest_record_time(
     session: SessionType,
     table: ModelBase,
-    datetime_col: MappedColumn = None,
+    datetime_col: MappedColumn,
     filters=None,
-) -> datetime:
+) -> Optional[datetime]:
     record = get_latest_record(
         session, table, datetime_col=datetime_col, filters=filters, return_dataframe=False
     )
@@ -71,12 +71,12 @@ def get_latest_record_time(
 
 def save_to_db(
     session: SessionType,
-    table: ModelBase,
+    table: Any,
     df: pd.DataFrame,
-    last_record_filters=None,
-    datetime_col: MappedColumn = None,
+    last_record_filters,
+    datetime_col: Any,
     unique_cols=None,
-):
+) -> Optional[int]:
     if unique_cols is not None:
         df.drop_duplicates(subset=unique_cols, inplace=True)
     lastet_record_time = get_latest_record_time(
@@ -100,8 +100,8 @@ def save_to_db(
         df[datetime_col.name] = df[datetime_col.name].dt.floor(freq="1s")
         df = df[df[datetime_col.name] > lastet_record_time]
     if len(df) == 0:
-        print(f"dataframe is empty after filter by latest record, original len {origin_len}")
         rows = 0
+        print(f"dataframe is empty after filter by latest record, original len {origin_len}")
     else:
         rows = df.to_sql(table.__tablename__, session.connection(), index=False, if_exists="append")
         session.commit()

@@ -99,7 +99,7 @@ class RPC:
 
     # Bind _fiat_converter if needed
     _fiat_converter: Optional[CryptoToFiatConverter] = None
-    strategy_callbacks :dict[str: Callable] = {}
+    strategy_callbacks: dict[str, Callable] = {}
 
     def __init__(self, freqtrade) -> None:
         """
@@ -248,8 +248,8 @@ class RPC:
                 stoploss_entry_dist_ratio = stop_entry.profit_ratio
 
                 # calculate distance to stoploss
-                stoploss_current_dist = trade.stop_loss - current_rate
-                stoploss_current_dist_ratio = stoploss_current_dist / current_rate
+                stoploss_current_dist = trade.stop_loss - current_rate  # type:ignore
+                stoploss_current_dist_ratio = stoploss_current_dist / current_rate  # type:ignore
 
                 trade_dict = trade.to_json()
                 trade_dict.update(
@@ -1319,7 +1319,7 @@ class RPC:
             # band-aid until this is fixed:
             # https://github.com/pandas-dev/pandas/issues/45836
             datetime_types = ["datetime", "datetime64", "datetime64[ns, UTC]"]
-            date_columns = dataframe.select_dtypes(include=datetime_types)
+            date_columns = dataframe.select_dtypes(include=datetime_types)  # type:ignore
             for date_column in date_columns:
                 # replace NaT with `None`
                 dataframe[date_column] = dataframe[date_column].astype(object).replace({NaT: None})
@@ -1535,7 +1535,7 @@ class RPC:
     def _get_market_direction(self) -> MarketDirection:
         return self._freqtrade.strategy.market_direction
 
-    def _insert_predictions(self, prediction_df: pd.DataFrame) -> int:
+    def _insert_predictions(self, prediction_df: pd.DataFrame) -> Optional[int]:
         if prediction_df is not None and len(prediction_df) > 0:
             model = prediction_df.iloc[0]["model"]
             prediction_df = prediction_df[prediction_df["model"] == model]
@@ -1554,7 +1554,9 @@ class RPC:
                 return rows
         return -1
 
-    def _get_current_positions(self, strategy: str = None, strategy_id: int = None) -> str:
+    def _get_current_positions(
+        self, strategy: Optional[str] = None, strategy_id: Optional[int] = None
+    ) -> list:
         filters = []
         if strategy is not None:
             filters.append(FtPostion.strategy == strategy)
@@ -1570,7 +1572,10 @@ class RPC:
         return result_list
 
     def get_latest_prediction(
-        self, model: str = None, model_name: str = None, pair: str = None
+        self,
+        model: Optional[str] = None,
+        model_name: Optional[str] = None,
+        pair: Optional[str] = None,
     ) -> list[dict]:
         filters = []
         if model is not None:
@@ -1595,7 +1600,10 @@ class RPC:
         return []
 
     def get_latest_position_record(
-        self, strategy: str, strategy_id: int, pair: str = None
+        self,
+        strategy: Optional[str] = None,
+        strategy_id: Optional[int] = None,
+        pair: Optional[str] = None,
     ) -> list[dict]:
         filters = []
         if strategy is not None:
@@ -1618,10 +1626,10 @@ class RPC:
 
     def _get_position_records(
         self,
-        strategy: str = None,
-        strategy_id: int = None,
-        start: datetime = None,
-        end: datetime = None,
+        strategy: Optional[str] = None,
+        strategy_id: Optional[int] = None,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
     ) -> list[dict]:
         filters = []
         if strategy is not None:

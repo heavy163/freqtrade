@@ -28,7 +28,10 @@ router = APIRouter()
 
 @router.get("/prediction/latest", response_model=list[FtPredictionSchema], tags=["prediction"])
 def get_latest_prediction(
-    model: str, model_name: str = None, pair: str = None, rpc: RPC = Depends(get_rpc)
+    model: str,
+    model_name: Optional[str] = None,
+    pair: Optional[str] = None,
+    rpc: RPC = Depends(get_rpc),
 ):
     """Insert predictions"""
     return rpc.get_latest_prediction(model, model_name, pair)
@@ -60,7 +63,7 @@ def get_position_records(
     strategy: Optional[str] = None,
     strategy_id: Optional[int] = None,
     start: Optional[datetime] = None,
-    end: Optional[str] = None,
+    end: Optional[datetime] = None,
     rpc: RPC = Depends(get_rpc),
 ):
     """Get Poistion Records"""
@@ -80,7 +83,7 @@ def get_latest_position_record(
 @router.get("/strategy/data", tags=["strategy"])
 def get_strategy_data(
     data_name: str,
-    data_query_args: dict = None,
+    data_query_args: Optional[dict] = None,
     rpc: RPC = Depends(get_rpc),
 ):
     if data_query_args is None:
