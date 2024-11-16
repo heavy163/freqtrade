@@ -5,6 +5,7 @@ from typing import Optional
 import pandas as pd
 from fastapi import APIRouter, Depends
 
+from freqtrade.persistence.trade_model_ext import FtPostionRecord, FtPrediction, FtWalletRecord
 from freqtrade.rpc import RPC
 from freqtrade.rpc.api_server.api_schemas import (
     CommonResponse,
@@ -34,7 +35,9 @@ def get_latest_prediction(
     rpc: RPC = Depends(get_rpc),
 ):
     """Insert predictions"""
-    return rpc.get_latest_prediction(model, model_name, pair)
+    result = rpc.get_latest_prediction(model, model_name, pair)
+    FtPrediction.session.remove()
+    return result
 
 
 @router.post("/predictions", response_model=CommonResponse, tags=["prediction"])
@@ -43,19 +46,8 @@ def add_prediction(predictions: list[FtPredictionSchema], rpc: RPC = Depends(get
     data_array = [p.to_row() for p in predictions]
     data_df = pd.DataFrame(data=data_array, columns=FtPredictionSchema.data_columns())
     rows = rpc._insert_predictions(data_df)
+    FtPrediction.session.remove()
     return {"code": 0, "messaged": "ok", "data": f"{rows}"}
-
-
-@router.get("/positions", response_model=list[FtPostionSchema], tags=["position"])
-def get_current_positions(
-    strategy: Optional[str] = None,
-    strategy_id: Optional[int] = None,
-    start: Optional[datetime] = None,
-    end: Optional[str] = None,
-    rpc: RPC = Depends(get_rpc),
-):
-    """Get Current Poistions"""
-    return rpc._get_current_positions(strategy, strategy_id)
 
 
 @router.get("/position/records", response_model=list[FtPostionSchema], tags=["position"])
@@ -67,7 +59,9 @@ def get_position_records(
     rpc: RPC = Depends(get_rpc),
 ):
     """Get Poistion Records"""
-    return rpc._get_position_records(strategy, strategy_id, start, end)
+    result = rpc._get_position_records(strategy, strategy_id, start, end)
+    FtPostionRecord.session.remove()
+    return result
 
 
 @router.get("/position/record/latest", response_model=list[FtPostionSchema], tags=["position"])
@@ -78,7 +72,10 @@ def get_latest_position_record(
     rpc: RPC = Depends(get_rpc),
 ):
     """Get latest position records"""
-    return rpc.get_latest_position_record(strategy, strategy_id, pair)
+    result = rpc.get_latest_position_record(strategy, strategy_id, pair)
+    FtPostionRecord.session.remove()
+    return result
+
 
 @router.get("/strategy/data", tags=["strategy"])
 def get_strategy_data(
