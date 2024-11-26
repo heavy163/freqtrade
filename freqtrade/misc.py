@@ -35,13 +35,12 @@ def file_dump_json(filename: Path, data: Any, is_zip: bool = False, log: bool = 
             logger.info(f'dumping json to "{filename}"')
 
         with gzip.open(filename, "wt", encoding="utf-8") as fpz:
-            rapidjson.dump(data, fpz, default=str, number_mode=rapidjson.NM_NATIVE)
+            rapidjson.dump(data, fpz, default=str, number_mode=rapidjson.NM_NAN)
     else:
         if log:
             logger.info(f'dumping json to "{filename}"')
         with filename.open("w") as fp:
-            rapidjson.dump(data, fp, default=str, number_mode=rapidjson.NM_NATIVE)
-
+            rapidjson.dump(data, fp, default=str, number_mode=rapidjson.NM_NAN)
     logger.debug(f'done json to "{filename}"')
 
 
@@ -67,7 +66,7 @@ def json_load(datafile: TextIO) -> Any:
     Use this to have a consistent experience,
     set number_mode to "NM_NATIVE" for greatest speed
     """
-    return rapidjson.load(datafile, number_mode=rapidjson.NM_NATIVE)
+    return rapidjson.load(datafile, number_mode=rapidjson.NM_NAN)
 
 
 def file_load_json(file: Path):
