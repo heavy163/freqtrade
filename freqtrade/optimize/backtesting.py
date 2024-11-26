@@ -806,7 +806,7 @@ class Backtesting:
 
             if exit_.exit_type not in (
                 ExitType.LIQUIDATION,
-                ExitType.PARTIAL_EXIT,
+                # ExitType.PARTIAL_EXIT,
             ) and not strategy_safe_wrapper(self.strategy.confirm_trade_exit, default_retval=True)(
                 pair=trade.pair,
                 trade=trade,  # type: ignore[arg-type]
