@@ -443,7 +443,10 @@ class DataProvider:
         """
         if self._exchange is None:
             raise OperationalException(NO_EXCHANGE_EXCEPTION)
-        final_pairs = (pairlist + helping_pairs) if helping_pairs else pairlist
+        #final_pairs = (pairlist + helping_pairs) if helping_pairs else pairlist
+        final_pairs = (
+            helping_pairs if helping_pairs is not None and len(helping_pairs) > 0 else pairlist
+        )
         # refresh latest ohlcv data
         self._exchange.refresh_latest_ohlcv(final_pairs)
         # refresh latest trades data
