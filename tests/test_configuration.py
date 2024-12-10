@@ -489,7 +489,6 @@ def test_setup_configuration_with_arguments(mocker, default_conf, caplog, tmp_pa
         "--timeframe",
         "1m",
         "--enable-position-stacking",
-        "--disable-max-market-positions",
         "--timerange",
         ":100",
         "--export",
@@ -517,10 +516,6 @@ def test_setup_configuration_with_arguments(mocker, default_conf, caplog, tmp_pa
 
     assert "position_stacking" in config
     assert log_has("Parameter --enable-position-stacking detected ...", caplog)
-
-    assert "use_max_market_positions" in config
-    assert log_has("Parameter --disable-max-market-positions detected ...", caplog)
-    assert log_has("max_open_trades set to unlimited ...", caplog)
 
     assert "timerange" in config
     assert log_has("Parameter --timerange detected: {} ...".format(config["timerange"]), caplog)
@@ -569,8 +564,6 @@ def test_setup_configuration_with_stratlist(mocker, default_conf, caplog) -> Non
     assert log_has("Using strategy list of 2 strategies", caplog)
 
     assert "position_stacking" not in config
-
-    assert "use_max_market_positions" not in config
 
     assert "timerange" not in config
 
@@ -1488,6 +1481,12 @@ def test_flat_vars_to_nested_dict(caplog):
         "FREQTRADE__STAKE_AMOUNT": "200.05",
         "FREQTRADE__TELEGRAM__CHAT_ID": "2151",
         "NOT_RELEVANT": "200.0",  # Will be ignored
+        "FREQTRADE__ARRAY": '[{"name":"default","host":"xxx"}]',
+        "FREQTRADE__EXCHANGE__PAIR_WHITELIST": '["BTC/USDT", "ETH/USDT"]',
+        # Fails due to trailing comma
+        "FREQTRADE__ARRAY_TRAIL_COMMA": '[{"name":"default","host":"xxx",}]',
+        # Object fails
+        "FREQTRADE__OBJECT": '{"name":"default","host":"xxx"}',
     }
     expected = {
         "stake_amount": 200.05,
@@ -1501,8 +1500,12 @@ def test_flat_vars_to_nested_dict(caplog):
             },
             "some_setting": True,
             "some_false_setting": False,
+            "pair_whitelist": ["BTC/USDT", "ETH/USDT"],
         },
         "telegram": {"chat_id": "2151"},
+        "array": [{"name": "default", "host": "xxx"}],
+        "object": '{"name":"default","host":"xxx"}',
+        "array_trail_comma": '[{"name":"default","host":"xxx",}]',
     }
     res = _flat_vars_to_nested_dict(test_args, ENV_VAR_PREFIX)
     assert res == expected

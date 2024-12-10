@@ -1,7 +1,7 @@
 import logging
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
-from typing import Any, Literal, Union
+from typing import Any, Literal
 
 import numpy as np
 from pandas import DataFrame, Series, concat, to_datetime
@@ -18,7 +18,7 @@ from freqtrade.data.metrics import (
     calculate_sortino,
 )
 from freqtrade.ft_types import BacktestResultType
-from freqtrade.util import decimals_per_coin, fmt_coin
+from freqtrade.util import decimals_per_coin, fmt_coin, get_dry_run_wallet
 
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ def generate_rejected_signals(
 
 
 def _generate_result_line(
-    result: DataFrame, starting_balance: int, first_column: Union[str, list[str]]
+    result: DataFrame, starting_balance: float, first_column: str | list[str]
 ) -> dict:
     """
     Generate one result dict, with "first_column" as key.
@@ -111,7 +111,7 @@ def _generate_result_line(
 def generate_pair_metrics(
     pairlist: list[str],
     stake_currency: str,
-    starting_balance: int,
+    starting_balance: float,
     results: DataFrame,
     skip_nan: bool = False,
 ) -> list[dict]:
@@ -143,8 +143,8 @@ def generate_pair_metrics(
 
 
 def generate_tag_metrics(
-    tag_type: Union[Literal["enter_tag", "exit_reason"], list[Literal["enter_tag", "exit_reason"]]],
-    starting_balance: int,
+    tag_type: Literal["enter_tag", "exit_reason"] | list[Literal["enter_tag", "exit_reason"]],
+    starting_balance: float,
     results: DataFrame,
     skip_nan: bool = False,
 ) -> list[dict]:
@@ -208,7 +208,7 @@ def _get_resample_from_period(period: str) -> str:
 
 
 def generate_periodic_breakdown_stats(
-    trade_list: Union[list, DataFrame], period: str
+    trade_list: list | DataFrame, period: str
 ) -> list[dict[str, Any]]:
     results = trade_list if not isinstance(trade_list, list) else DataFrame.from_records(trade_list)
     if len(results) == 0:
@@ -373,7 +373,7 @@ def generate_strategy_stats(
         return {}
     config = content["config"]
     max_open_trades = min(config["max_open_trades"], len(pairlist))
-    start_balance = config["dry_run_wallet"]
+    start_balance = get_dry_run_wallet(config)
     stake_currency = config["stake_currency"]
 
     pair_results = generate_pair_metrics(
@@ -559,7 +559,7 @@ def generate_strategy_stats(
 
 def generate_backtest_stats(
     btdata: dict[str, DataFrame],
-    all_results: dict[str, dict[str, Union[DataFrame, dict]]],
+    all_results: dict[str, dict[str, DataFrame | dict]],
     min_date: datetime,
     max_date: datetime,
 ) -> BacktestResultType:

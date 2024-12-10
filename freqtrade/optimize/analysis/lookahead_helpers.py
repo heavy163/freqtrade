@@ -1,7 +1,7 @@
 import logging
 import time
 from pathlib import Path
-from typing import Any, Union
+from typing import Any
 
 import pandas as pd
 from rich.text import Text
@@ -10,7 +10,7 @@ from freqtrade.constants import Config
 from freqtrade.exceptions import OperationalException
 from freqtrade.optimize.analysis.lookahead import LookaheadAnalysis
 from freqtrade.resolvers import StrategyResolver
-from freqtrade.util import print_rich_table
+from freqtrade.util import get_dry_run_wallet, print_rich_table
 
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ class LookaheadAnalysisSubFunctions:
     def text_table_lookahead_analysis_instances(
         config: dict[str, Any],
         lookahead_instances: list[LookaheadAnalysis],
-        caption: Union[str, None] = None,
+        caption: str | None = None,
     ):
         headers = [
             "filename",
@@ -163,7 +163,7 @@ class LookaheadAnalysisSubFunctions:
             config["max_open_trades"] = len(config["pairs"])
 
         min_dry_run_wallet = 1000000000
-        if config["dry_run_wallet"] < min_dry_run_wallet:
+        if get_dry_run_wallet(config) < min_dry_run_wallet:
             logger.info(
                 "Dry run wallet was not set to 1 billion, pushing it up there "
                 "just to avoid false positives"
@@ -243,7 +243,7 @@ class LookaheadAnalysisSubFunctions:
 
         # report the results
         if lookaheadAnalysis_instances:
-            caption: Union[str, None] = None
+            caption: str | None = None
             if any(
                 [
                     any(

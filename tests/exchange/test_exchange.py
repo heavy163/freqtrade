@@ -1069,7 +1069,6 @@ def test_create_dry_run_order(default_conf, mocker, side, exchange_name, leverag
     assert order["type"] == "limit"
     assert order["symbol"] == "ETH/BTC"
     assert order["amount"] == 1
-    assert order["leverage"] == leverage
     assert order["cost"] == 1 * 200
 
 
@@ -1274,6 +1273,9 @@ def test_create_order(default_conf, mocker, side, ordertype, rate, marketprice, 
     exchange._set_leverage = MagicMock()
     exchange.set_margin_mode = MagicMock()
 
+    # Only applies to gate
+    price_req = exchange._ft_has.get("marketOrderRequiresPrice", False)
+
     order = exchange.create_order(
         pair="XLTCUSDT", ordertype=ordertype, side=side, amount=1, rate=rate, leverage=1.0
     )
@@ -1286,7 +1288,9 @@ def test_create_order(default_conf, mocker, side, ordertype, rate, marketprice, 
     assert api_mock.create_order.call_args[0][1] == ordertype
     assert api_mock.create_order.call_args[0][2] == side
     assert api_mock.create_order.call_args[0][3] == 1
-    assert api_mock.create_order.call_args[0][4] is rate
+    assert api_mock.create_order.call_args[0][4] == (
+        rate if price_req or not (bool(marketprice) and side == "sell") else None
+    )
     assert exchange._set_leverage.call_count == 0
     assert exchange.set_margin_mode.call_count == 0
 
@@ -1364,7 +1368,7 @@ def test_buy_prod(default_conf, mocker, exchange_name):
     assert api_mock.create_order.call_args[0][1] == order_type
     assert api_mock.create_order.call_args[0][2] == "buy"
     assert api_mock.create_order.call_args[0][3] == 1
-    if exchange._order_needs_price(order_type):
+    if exchange._order_needs_price("buy", order_type):
         assert api_mock.create_order.call_args[0][4] == 200
     else:
         assert api_mock.create_order.call_args[0][4] is None
@@ -1511,7 +1515,7 @@ def test_buy_considers_time_in_force(default_conf, mocker, exchange_name):
     assert api_mock.create_order.call_args[0][1] == order_type
     assert api_mock.create_order.call_args[0][2] == "buy"
     assert api_mock.create_order.call_args[0][3] == 1
-    if exchange._order_needs_price(order_type):
+    if exchange._order_needs_price("buy", order_type):
         assert api_mock.create_order.call_args[0][4] == 200
     else:
         assert api_mock.create_order.call_args[0][4] is None
@@ -1556,7 +1560,7 @@ def test_sell_prod(default_conf, mocker, exchange_name):
     assert api_mock.create_order.call_args[0][1] == order_type
     assert api_mock.create_order.call_args[0][2] == "sell"
     assert api_mock.create_order.call_args[0][3] == 1
-    if exchange._order_needs_price(order_type):
+    if exchange._order_needs_price("sell", order_type):
         assert api_mock.create_order.call_args[0][4] == 200
     else:
         assert api_mock.create_order.call_args[0][4] is None
@@ -1666,7 +1670,7 @@ def test_sell_considers_time_in_force(default_conf, mocker, exchange_name):
     assert api_mock.create_order.call_args[0][1] == order_type
     assert api_mock.create_order.call_args[0][2] == "sell"
     assert api_mock.create_order.call_args[0][3] == 1
-    if exchange._order_needs_price(order_type):
+    if exchange._order_needs_price("sell", order_type):
         assert api_mock.create_order.call_args[0][4] == 200
     else:
         assert api_mock.create_order.call_args[0][4] is None
@@ -2003,6 +2007,46 @@ def test_get_tickers(default_conf, mocker, exchange_name, caplog):
 
 
 @pytest.mark.parametrize("exchange_name", EXCHANGES)
+def test_get_conversion_rate(default_conf_usdt, mocker, exchange_name):
+    api_mock = MagicMock()
+    tick = {
+        "ETH/USDT": {
+            "last": 42,
+        },
+        "BCH/USDT": {
+            "last": 41,
+        },
+        "ETH/BTC": {
+            "last": 250,
+        },
+    }
+    tick2 = {
+        "ADA/USDT:USDT": {
+            "last": 2.5,
+        }
+    }
+    mocker.patch(f"{EXMS}.exchange_has", return_value=True)
+    api_mock.fetch_tickers = MagicMock(side_effect=[tick, tick2])
+    api_mock.fetch_bids_asks = MagicMock(return_value={})
+
+    exchange = get_patched_exchange(mocker, default_conf_usdt, api_mock, exchange=exchange_name)
+    # retrieve original ticker
+    assert exchange.get_conversion_rate("USDT", "USDT") == 1
+    assert api_mock.fetch_tickers.call_count == 0
+    assert exchange.get_conversion_rate("ETH", "USDT") == 42
+    assert exchange.get_conversion_rate("ETH", "USDC") is None
+    assert exchange.get_conversion_rate("ETH", "BTC") == 250
+    assert exchange.get_conversion_rate("BTC", "ETH") == 0.004
+
+    assert api_mock.fetch_tickers.call_count == 1
+    api_mock.fetch_tickers.reset_mock()
+
+    assert exchange.get_conversion_rate("ADA", "USDT") == 2.5
+    # Only the call to the "others" market
+    assert api_mock.fetch_tickers.call_count == 1
+
+
+@pytest.mark.parametrize("exchange_name", EXCHANGES)
 def test_fetch_ticker(default_conf, mocker, exchange_name):
     api_mock = MagicMock()
     tick = {
@@ -2087,6 +2131,7 @@ def test___now_is_time_to_refresh(default_conf, mocker, exchange_name, time_mach
 @pytest.mark.parametrize("candle_type", ["mark", ""])
 @pytest.mark.parametrize("exchange_name", EXCHANGES)
 def test_get_historic_ohlcv(default_conf, mocker, caplog, exchange_name, candle_type):
+    caplog.set_level(logging.DEBUG)
     exchange = get_patched_exchange(mocker, default_conf, exchange=exchange_name)
     pair = "ETH/BTC"
     calls = 0
@@ -2119,7 +2164,7 @@ def test_get_historic_ohlcv(default_conf, mocker, caplog, exchange_name, candle_
     assert exchange._async_get_candle_history.call_count == 2
     # Returns twice the above OHLCV data after truncating the open candle.
     assert len(ret) == 2
-    assert log_has_re(r"Downloaded data for .* with length .*\.", caplog)
+    assert log_has_re(r"Downloaded data for .* from ccxt with length .*\.", caplog)
 
     caplog.clear()
 
@@ -2152,7 +2197,7 @@ async def test__async_get_historic_ohlcv(default_conf, mocker, caplog, exchange_
 
     pair = "ETH/USDT"
     respair, restf, _, res, _ = await exchange._async_get_historic_ohlcv(
-        pair, "5m", 1500000000000, candle_type=candle_type, is_new_pair=False
+        pair, "5m", 1500000000000, candle_type=candle_type
     )
     assert respair == pair
     assert restf == "5m"
@@ -2164,7 +2209,7 @@ async def test__async_get_historic_ohlcv(default_conf, mocker, caplog, exchange_
     end_ts = 1_500_500_000_000
     start_ts = 1_500_000_000_000
     respair, restf, _, res, _ = await exchange._async_get_historic_ohlcv(
-        pair, "5m", since_ms=start_ts, candle_type=candle_type, is_new_pair=False, until_ms=end_ts
+        pair, "5m", since_ms=start_ts, candle_type=candle_type, until_ms=end_ts
     )
     # Required candles
     candles = (end_ts - start_ts) / 300_000
@@ -4074,10 +4119,16 @@ def test_get_valid_pair_combination(default_conf, mocker, markets):
     )
     ex = Exchange(default_conf)
 
-    assert ex.get_valid_pair_combination("ETH", "BTC") == "ETH/BTC"
-    assert ex.get_valid_pair_combination("BTC", "ETH") == "ETH/BTC"
+    assert next(ex.get_valid_pair_combination("ETH", "BTC")) == "ETH/BTC"
+    assert next(ex.get_valid_pair_combination("BTC", "ETH")) == "ETH/BTC"
+    multicombs = list(ex.get_valid_pair_combination("ETH", "USDT"))
+    assert len(multicombs) == 2
+    assert "ETH/USDT" in multicombs
+    assert "ETH/USDT:USDT" in multicombs
+
     with pytest.raises(ValueError, match=r"Could not combine.* to get a valid pair."):
-        ex.get_valid_pair_combination("NOPAIR", "ETH")
+        for x in ex.get_valid_pair_combination("NOPAIR", "ETH"):
+            pass
 
 
 @pytest.mark.parametrize(
@@ -4446,6 +4497,7 @@ def test_market_is_tradable(
     ex = get_patched_exchange(mocker, default_conf, exchange=exchange)
     market = {
         "symbol": market_symbol,
+        "type": "swap",
         "base": base,
         "quote": quote,
         "spot": spot,
@@ -6125,6 +6177,7 @@ def test_get_liquidation_price(
     default_conf_usdt["exchange"]["name"] = exchange_name
     default_conf_usdt["margin_mode"] = margin_mode
     mocker.patch("freqtrade.exchange.gate.Gate.validate_ordertypes")
+    mocker.patch(f"{EXMS}.price_to_precision", lambda s, x, y, **kwargs: y)
     exchange = get_patched_exchange(mocker, default_conf_usdt, exchange=exchange_name)
 
     exchange.get_maintenance_ratio_and_amt = MagicMock(return_value=(0.01, 0.01))

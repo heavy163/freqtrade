@@ -46,7 +46,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.cache/pip
-        key: test-${{ matrix.os }}-${{ matrix.python-version }}-pip
+        key: pip-${{ matrix.python-version }}-ubuntu
 
     - name: TA binary *nix
       if: steps.cache.outputs.cache-hit != 'true'
@@ -68,6 +68,12 @@ jobs:
         python build_helpers/freqtrade_client_version_align.py
 
     - name: Tests
+      if: (!(runner.os == 'Linux' && matrix.python-version == '3.12' && matrix.os == 'ubuntu-22.04'))
+      run: |
+        pytest --random-order
+
+    - name: Tests with Coveralls
+      if: (runner.os == 'Linux' && matrix.python-version == '3.12' && matrix.os == 'ubuntu-22.04')
       run: |
         pytest --random-order --cov=freqtrade --cov=freqtrade_client --cov-config=.coveragerc
 
@@ -138,7 +144,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ "macos-12", "macos-13", "macos-14" ]
+        os: [ "macos-13", "macos-14", "macos-15" ]
         python-version: ["3.10", "3.11", "3.12"]
 
     steps:
@@ -161,7 +167,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/Library/Caches/pip
-        key: ${{ matrix.os }}-${{ matrix.python-version }}-pip
+        key: pip-${{ matrix.os }}-${{ matrix.python-version }}
 
     - name: TA binary *nix
       if: steps.cache.outputs.cache-hit != 'true'
@@ -190,7 +196,7 @@ jobs:
         rm /usr/local/bin/python3.11-config || true
         rm /usr/local/bin/python3.12-config || true
 
-        brew install hdf5 c-blosc libomp
+        brew install libomp
 
     - name: Installation (python)
       run: |
@@ -274,7 +280,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~\AppData\Local\pip\Cache
-        key: ${{ matrix.os }}-${{ matrix.python-version }}-pip
+        key: pip-${{ matrix.os }}-${{ matrix.python-version }}
 
     - name: Installation
       run: |
@@ -414,7 +420,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.cache/pip
-        key: test-${{ matrix.os }}-${{ matrix.python-version }}-pip
+        key: pip-3.12-ubuntu
 
     - name: TA binary *nix
       if: steps.cache.outputs.cache-hit != 'true'
@@ -511,13 +517,40 @@ jobs:
           ft_client/dist
         retention-days: 10
 
-  deploy-pypi:
-    name: "Deploy to PyPI"
+  deploy-test-pypi:
+    name: "Publish Python 🐍 distribution 📦 to TestPyPI"
     needs: [ build ]
     runs-on: ubuntu-22.04
     if: (github.event_name == 'release')
     environment:
-      name: release
+      name: testpypi
+      url: https://test.pypi.org/p/freqtrade
+    permissions:
+      id-token: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download artifact  📦
+      uses: actions/download-artifact@v4
+      with:
+        pattern: freqtrade*-build
+        path: dist
+        merge-multiple: true
+
+    - name: Publish to PyPI (Test)
+      uses: pypa/gh-action-pypi-publish@v1.12.2
+      with:
+        repository-url: https://test.pypi.org/legacy/
+
+
+  deploy-pypi:
+    name: "Publish Python 🐍 distribution 📦 to PyPI"
+    needs: [ build ]
+    runs-on: ubuntu-22.04
+    if: (github.event_name == 'release')
+    environment:
+      name: pypi
       url: https://pypi.org/p/freqtrade
     permissions:
       id-token: write
@@ -532,14 +565,8 @@ jobs:
         path: dist
         merge-multiple: true
 
-
-    - name: Publish to PyPI (Test)
-      uses: pypa/gh-action-pypi-publish@v1.10.3
-      with:
-        repository-url: https://test.pypi.org/legacy/
-
     - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@v1.10.3
+      uses: pypa/gh-action-pypi-publish@v1.12.2
 
 
   deploy-docker:

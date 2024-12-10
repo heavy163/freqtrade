@@ -5,7 +5,7 @@ import random
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -111,7 +111,7 @@ class FreqaiDataKitchen:
     def set_paths(
         self,
         pair: str,
-        trained_timestamp: Optional[int] = None,
+        trained_timestamp: int | None = None,
     ) -> None:
         """
         Set the paths to the data for the present coin/botloop
@@ -849,7 +849,7 @@ class FreqaiDataKitchen:
             dataframe = strategy.set_freqai_targets(dataframe.copy(), metadata=metadata)
             dataframe = self.remove_special_chars_from_feature_names(dataframe)
 
-        self.get_unique_classes_from_labels(dataframe)
+            self.get_unique_classes_from_labels(dataframe)
 
         if self.config.get("reduce_df_footprint", False):
             dataframe = reduce_dataframe_footprint(dataframe)

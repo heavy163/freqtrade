@@ -102,8 +102,17 @@
     },
     "dry_run_wallet": {
       "description": "Initial wallet balance for dry run mode.",
-      "type": "number",
-      "default": 1000
+      "type": [
+        "number",
+        "object"
+      ],
+      "default": 1000,
+      "patternProperties": {
+        "^[a-zA-Z0-9]+$": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
     },
     "cancel_open_orders_on_exit": {
       "description": "Cancel open orders when exiting.",
@@ -682,12 +691,18 @@
             },
             "exit_fill": {
               "description": "Telegram setting for exit fill signals.",
-              "type": "string",
-              "enum": [
-                "on",
-                "off",
-                "silent"
+              "type": [
+                "string",
+                "object"
               ],
+              "additionalProperties": {
+                "type": "string",
+                "enum": [
+                  "on",
+                  "off",
+                  "silent"
+                ]
+              },
               "default": "on"
             },
             "exit_cancel": {
@@ -1382,6 +1397,11 @@
           "description": "A unique ID for the current model. Must be changed when modifying features.",
           "type": "string",
           "default": "example"
+        },
+        "wait_for_training_iteration_on_reload": {
+          "description": "Wait for the next training iteration to complete after /reload or ctrl+c.",
+          "type": "boolean",
+          "default": true
         },
         "feature_parameters": {
           "description": "The parameters used to engineer the feature set",

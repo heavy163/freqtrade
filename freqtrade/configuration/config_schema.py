@@ -85,8 +85,10 @@ CONF_SCHEMA = {
         },
         "dry_run_wallet": {
             "description": "Initial wallet balance for dry run mode.",
-            "type": "number",
+            "type": ["number", "object"],
             "default": DRY_RUN_WALLET,
+            "patternProperties": {r"^[a-zA-Z0-9]+$": {"type": "number"}},
+            "additionalProperties": False,
         },
         "cancel_open_orders_on_exit": {
             "description": "Cancel open orders when exiting.",
@@ -517,8 +519,11 @@ CONF_SCHEMA = {
                         },
                         "exit_fill": {
                             "description": "Telegram setting for exit fill signals.",
-                            "type": "string",
-                            "enum": TELEGRAM_SETTING_OPTIONS,
+                            "type": ["string", "object"],
+                            "additionalProperties": {
+                                "type": "string",
+                                "enum": TELEGRAM_SETTING_OPTIONS,
+                            },
                             "default": "on",
                         },
                         "exit_cancel": {
@@ -994,6 +999,13 @@ CONF_SCHEMA = {
                     ),
                     "type": "string",
                     "default": "example",
+                },
+                "wait_for_training_iteration_on_reload": {
+                    "description": (
+                        "Wait for the next training iteration to complete after /reload or ctrl+c."
+                    ),
+                    "type": "boolean",
+                    "default": True,
                 },
                 "feature_parameters": {
                     "description": "The parameters used to engineer the feature set",
