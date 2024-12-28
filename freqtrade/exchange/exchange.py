@@ -2615,7 +2615,7 @@ class Exchange:
         plr = self._pairs_last_refresh_time.get((pair, timeframe, candle_type), 0) + interval_in_sec
         # current,active candle open date
         now = int(timeframe_to_prev_date(timeframe).timestamp())
-        return plr <= now
+        return plr < now
 
     @retrier_async
     async def _async_get_candle_history(
