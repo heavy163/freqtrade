@@ -302,6 +302,19 @@ class Backtesting:
             candle_type=self.config.get("candle_type_def", CandleType.SPOT),
         )
 
+        if True:
+            timeframe_mins = 0
+            if self.timeframe == "1h":
+                timeframe_mins = 60
+            elif self.timeframe == "30m":
+                timeframe_mins = 30
+            elif self.timeframe == "15m":
+                timeframe_mins = 15
+            for pair in data.keys():
+                df = data[pair]
+                df["date"] = df["date"] + timedelta(minutes=timeframe_mins)
+                data[pair] = df
+
         min_date, max_date = history.get_timerange(data)
 
         logger.info(
