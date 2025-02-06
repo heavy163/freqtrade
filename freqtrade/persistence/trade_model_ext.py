@@ -9,6 +9,7 @@ from sqlalchemy import (
     Float,
     Integer,
     String,
+    Boolean,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -113,14 +114,7 @@ class FtPostion(ModelBase):
     latest_close: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
     latest_high: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
     latest_low: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
-    trade_id: Mapped[int] = mapped_column(Integer, nullable=True)
-    trade_side: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
-    trade_leverage: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
-    trade_stake_amount: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
-    trade_value: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
-    unbalance_time: Mapped[Optional[datetime]] = mapped_column(nullable=True)
-    unbalance_state: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
-    warn_state: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    is_monitor: Mapped[bool] = mapped_column(Boolean, nullable=True)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -155,14 +149,7 @@ class FtPostion(ModelBase):
             "latest_close": self.latest_close,
             "latest_high": self.latest_high,
             "latest_low": self.latest_low,
-            "trade_id": self.trade_id,
-            "trade_side": self.trade_side,
-            "trade_leverage": self.trade_leverage,
-            "trade_stake_amount": self.trade_stake_amount,
-            "trade_value": self.trade_value,
-            "unbalance_time": self.unbalance_time,
-            "unbalance_state": self.unbalance_state,
-            "warn_state": self.warn_state,
+            "is_monitor": self.is_monitor,
         }
 
 class FtPostionRecord(ModelBase):
@@ -193,14 +180,7 @@ class FtPostionRecord(ModelBase):
     latest_close: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
     latest_high: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
     latest_low: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
-    trade_id: Mapped[int] = mapped_column(Integer, nullable=True)
-    trade_side: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
-    trade_leverage: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
-    trade_stake_amount: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
-    trade_value: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
-    unbalance_time: Mapped[Optional[datetime]] = mapped_column(nullable=True)
-    unbalance_state: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
-    warn_state: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    is_monitor: Mapped[bool] = mapped_column(Boolean, nullable=True)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -235,12 +215,5 @@ class FtPostionRecord(ModelBase):
             "latest_close": self.latest_close,
             "latest_high": self.latest_high,
             "latest_low": self.latest_low,
-            "trade_id": self.trade_id,
-            "trade_side": self.trade_side,
-            "trade_leverage": self.trade_leverage,
-            "trade_stake_amount": self.trade_stake_amount,
-            "trade_value": self.trade_value,
-            "unbalance_time": self.unbalance_time,
-            "unbalance_state": self.unbalance_state,
-            "warn_state": self.warn_state,
+            "is_monitor": self.is_monitor,
         }
