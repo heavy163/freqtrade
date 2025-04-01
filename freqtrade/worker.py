@@ -194,7 +194,9 @@ class Worker:
 
     def _process_running(self) -> None:
         try:
+            counter = time.perf_counter()
             self.freqtrade.process()
+            logger.info("Process took %.2f ms", (time.perf_counter() - counter) * 1000)
         except TemporaryError as error:
             logger.warning(f"Error: {error}, retrying in {RETRY_TIMEOUT} seconds...")
             time.sleep(RETRY_TIMEOUT)
