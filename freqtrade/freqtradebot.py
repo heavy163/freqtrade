@@ -1,14 +1,14 @@
 """
 Freqtrade is the main module of this bot. It contains the class Freqtrade()
 """
-
+# ruff: noqa
 import logging
 import traceback
 from copy import deepcopy
 from datetime import datetime, time, timedelta, timezone
 from math import isclose
 from threading import Lock
-from time import sleep
+from time import sleep, perf_counter
 from typing import Any
 
 from schedule import Scheduler
@@ -252,6 +252,7 @@ class FreqtradeBot(LoggingMixin):
         otherwise a new trade is created.
         :return: True if one or more trades has been created or closed, False otherwise
         """
+        counter = perf_counter()
 
         # Check whether markets have to be reloaded and reload them when it's needed
         self.exchange.reload_markets()
@@ -263,22 +264,39 @@ class FreqtradeBot(LoggingMixin):
 
         self.active_pair_whitelist = self._refresh_active_whitelist(trades)
 
+        logger.info(
+            "Process refresh market and whitelist took %.2f ms", (perf_counter() - counter) * 1000
+        )
+        counter = perf_counter()
+
         # Refreshing candles
         self.dataprovider.refresh(
             self.pairlists.create_pair_list(self.active_pair_whitelist),
             self.strategy.gather_informative_pairs(),
         )
 
+        logger.info("Process refresh candles took %.2f ms", (perf_counter() - counter) * 1000)
+        counter = perf_counter()
+
         strategy_safe_wrapper(self.strategy.bot_loop_start, supress_error=True)(
             current_time=datetime.now(timezone.utc)
         )
 
+        logger.info("Process call bot loop start took %.2f ms", (perf_counter() - counter) * 1000)
+        counter = perf_counter()
+
         with self._measure_execution:
             self.strategy.analyze(self.active_pair_whitelist)
+
+        logger.info("Process analyze pairs took %.2f ms", (perf_counter() - counter) * 1000)
+        counter = perf_counter()
 
         with self._exit_lock:
             # Check for exchange cancellations, timeouts and user requested replace
             self.manage_open_orders()
+
+        logger.info("Process manage open orders took %.2f ms", (perf_counter() - counter) * 1000)
+        counter = perf_counter()
 
         # Protect from collisions with force_exit.
         # Without this, freqtrade may try to recreate stoploss_on_exchange orders
@@ -288,18 +306,40 @@ class FreqtradeBot(LoggingMixin):
             # First process current opened trades (positions)
             self.exit_positions(trades)
 
+        logger.info("Process manage exit positions took %.2f ms", (perf_counter() - counter) * 1000)
+        counter = perf_counter()
+
         # Check if we need to adjust our current positions before attempting to enter new trades.
         if self.strategy.position_adjustment_enable:
             with self._exit_lock:
                 self.process_open_trade_positions()
 
+        logger.info(
+            "Process manage adjust positions took %.2f ms", (perf_counter() - counter) * 1000
+        )
+        counter = perf_counter()
+
         # Then looking for entry opportunities
         if self.get_free_open_trades():
             self.enter_positions()
+
+        logger.info(
+            "Process manage enter positions took %.2f ms", (perf_counter() - counter) * 1000
+        )
+        counter = perf_counter()
+
         self._schedule.run_pending()
+
+        logger.info("Process manage run_pending took %.2f ms", (perf_counter() - counter) * 1000)
+        counter = perf_counter()
+
         Trade.commit()
         self.rpc.process_msg_queue(self.dataprovider._msg_queue)
         self.last_process = datetime.now(timezone.utc)
+
+        logger.info(
+            "Process manage process_msg_queue took %.2f ms", (perf_counter() - counter) * 1000
+        )
 
     def process_stopped(self) -> None:
         """
