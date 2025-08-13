@@ -166,6 +166,7 @@ class Exchange:
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
         # TradingMode.SPOT always supported and not required in this list
     ]
+    _ignore_funding_fee = False
 
     def __init__(
         self,
@@ -3575,7 +3576,8 @@ class Exchange:
         :param time_in_ratio: Not used by most exchange classes
         """
         fees: float = 0
-
+        if self._ignore_funding_fee:
+            return fees
         if not df.empty:
             df1 = df[(df["date"] >= open_date) & (df["date"] <= close_date)]
             fees = sum(df1["open_fund"] * df1["open_mark"] * amount)
