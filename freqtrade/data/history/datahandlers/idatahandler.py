@@ -8,7 +8,7 @@ import logging
 import re
 from abc import ABC, abstractmethod
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from pandas import DataFrame, to_datetime
@@ -23,6 +23,7 @@ from freqtrade.data.converter import (
     trim_dataframe,
 )
 from freqtrade.enums import CandleType, TradingMode
+from freqtrade.exceptions import OperationalException
 from freqtrade.exchange import timeframe_to_seconds
 
 
@@ -117,8 +118,8 @@ class IDataHandler(ABC):
         df = self._ohlcv_load(pair, timeframe, None, candle_type)
         if df.empty:
             return (
-                datetime.fromtimestamp(0, tz=timezone.utc),
-                datetime.fromtimestamp(0, tz=timezone.utc),
+                datetime.fromtimestamp(0, tz=UTC),
+                datetime.fromtimestamp(0, tz=UTC),
                 0,
             )
         return df.iloc[0]["date"].to_pydatetime(), df.iloc[-1]["date"].to_pydatetime(), len(df)
@@ -200,8 +201,8 @@ class IDataHandler(ABC):
         df = self._trades_load(pair, trading_mode)
         if df.empty:
             return (
-                datetime.fromtimestamp(0, tz=timezone.utc),
-                datetime.fromtimestamp(0, tz=timezone.utc),
+                datetime.fromtimestamp(0, tz=UTC),
+                datetime.fromtimestamp(0, tz=UTC),
                 0,
             )
         return (
@@ -549,9 +550,13 @@ def get_datahandlerclass(datatype: str) -> type[IDataHandler]:
 
         return JsonGzDataHandler
     elif datatype == "hdf5":
-        from .hdf5datahandler import HDF5DataHandler
+        raise OperationalException(
+            "DEPRECATED: The hdf5 dataformat is deprecated and has been removed in 2025.1. "
+            "Please downgrade to 2024.12 and use the convert-data command to convert your data "
+            "to a supported format."
+            "We recommend using the feather format, as it is faster and is more space-efficient."
+        )
 
-        return HDF5DataHandler
     elif datatype == "feather":
         from .featherdatahandler import FeatherDataHandler
 

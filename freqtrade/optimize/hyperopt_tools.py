@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Iterator
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -71,7 +71,7 @@ class HyperoptTools:
             "strategy_name": strategy_name,
             "params": final_params,
             "ft_stratparam_v": 1,
-            "export_time": datetime.now(timezone.utc),
+            "export_time": datetime.now(UTC),
         }
         logger.info(f"Dumping parameters to {filename}")
         with filename.open("w") as f:
@@ -107,7 +107,7 @@ class HyperoptTools:
         """
         Tell if the space value is contained in the configuration
         """
-        # 'trailing' and 'protection spaces are not included in the 'default' set of spaces
+        # The following spaces are not included in the 'default' set of spaces
         if space in ("trailing", "protection", "trades"):
             return any(s in config["spaces"] for s in [space, "all"])
         else:
@@ -374,7 +374,6 @@ class HyperoptTools:
 
         trials = json_normalize(results, max_level=1)
         trials["Best"] = ""
-        trials["Stake currency"] = config["stake_currency"]
 
         base_metrics = [
             "Best",
@@ -383,11 +382,13 @@ class HyperoptTools:
             "results_metrics.profit_mean",
             "results_metrics.profit_median",
             "results_metrics.profit_total",
-            "Stake currency",
+            "results_metrics.stake_currency",
             "results_metrics.profit_total_abs",
             "results_metrics.holding_avg",
             "results_metrics.trade_count_long",
             "results_metrics.trade_count_short",
+            "results_metrics.max_drawdown_abs",
+            "results_metrics.max_drawdown_account",
             "loss",
             "is_initial_point",
             "is_best",
@@ -409,6 +410,8 @@ class HyperoptTools:
             "Avg duration",
             "Trade count long",
             "Trade count short",
+            "Max drawdown",
+            "Max drawdown percent",
             "Objective",
             "is_initial_point",
             "is_best",
@@ -430,6 +433,9 @@ class HyperoptTools:
         )
         trials["Profit"] = trials["Profit"].apply(lambda x: f"{x:,.2f}" if not isna(x) else "")
         trials["Avg profit"] = trials["Avg profit"].apply(
+            lambda x: f"{x * perc_multi:,.2f}%" if not isna(x) else ""
+        )
+        trials["Max drawdown percent"] = trials["Max drawdown percent"].apply(
             lambda x: f"{x * perc_multi:,.2f}%" if not isna(x) else ""
         )
         trials["Objective"] = trials["Objective"].apply(

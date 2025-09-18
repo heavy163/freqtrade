@@ -96,7 +96,10 @@ class Worker:
             logger.info(
                 f"Changing state{f' from {old_state.name}' if old_state else ''} to: {state.name}"
             )
-            if state == State.RUNNING:
+            if state in (State.RUNNING, State.PAUSED) and old_state not in (
+                State.RUNNING,
+                State.PAUSED,
+            ):
                 self.freqtrade.startup()
 
             if state == State.STOPPED:
@@ -112,9 +115,10 @@ class Worker:
 
             self._throttle(func=self._process_stopped, throttle_secs=self._throttle_secs)
 
-        elif state == State.RUNNING:
+        elif state in (State.RUNNING, State.PAUSED):
+            state_str = "RUNNING" if state == State.RUNNING else "PAUSED"
             # Ping systemd watchdog before throttling
-            self._notify("WATCHDOG=1\nSTATUS=State: RUNNING.")
+            self._notify(f"WATCHDOG=1\nSTATUS=State: {state_str}.")
 
             throttle_secs = self.freqtrade.strategy.process_throttle_secs()
             throttle_secs = self._throttle_secs if throttle_secs is None else throttle_secs
@@ -225,7 +229,7 @@ class Worker:
         # Load and validate config and create new instance of the bot
         self._init(True)
 
-        self.freqtrade.notify_status("config reloaded")
+        self.freqtrade.notify_status(f"{State(self.freqtrade.state)} after config reloaded")
 
         # Tell systemd that we completed reconfiguration
         self._notify("READY=1")

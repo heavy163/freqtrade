@@ -513,7 +513,7 @@ By default, freqtrade will attempt to load strategies from all `.py` files withi
 Assuming your strategy is called `AwesomeStrategy`, stored in the file `user_data/strategies/AwesomeStrategy.py`, then you can start freqtrade in dry (or live, depending on your configuration) mode with:
 
 ```bash
-    freqtrade trade --strategy AwesomeStrategy`
+freqtrade trade --strategy AwesomeStrategy
 ```
 
 Note that we're using the class name, not the file name.
@@ -545,7 +545,7 @@ def informative_pairs(self):
             ]
 ```
 
-A full sample can be found [in the DataProvider section](#complete-data-provider-sample).
+A full sample can be found [in the DataProvider section](#complete-dataprovider-sample).
 
 !!! Warning
     As these pairs will be refreshed as part of the regular whitelist refresh, it's best to keep this list short.
@@ -576,7 +576,7 @@ To easily define informative pairs, use the `@informative` decorator. All decora
 and do not have access to data from other informative pairs. However, all informative dataframes for each pair are merged and passed to main `populate_indicators()` method.
 
 !!! Note
-    Do not use the `@informative` decorator if you need to use data from one informative pair when generating another informative pair. Instead, define informative pairs manually as described [in the DataProvider section](#complete-data-provider-sample).
+    Do not use the `@informative` decorator if you need to use data from one informative pair when generating another informative pair. Instead, define informative pairs manually as described [in the DataProvider section](#complete-dataprovider-sample).
 
 When hyperopting, use of the hyperoptable parameter `.value` attribute is not supported. Please use the `.range` attribute. See [optimizing an indicator parameter](hyperopt.md#optimizing-an-indicator-parameter) for more information.
 
@@ -710,7 +710,7 @@ Options:
 - Merge the dataframe without lookahead bias
 - Forward-fill (optional)
 
-For a full sample, please refer to the [complete data provider example](#complete-data-provider-sample) below.
+For a full sample, please refer to the [complete data provider example](#complete-dataprovider-sample) below.
 
 All columns of the informative dataframe will be available on the returning dataframe in a renamed fashion:
 
@@ -783,6 +783,7 @@ Please always check the mode of operation to select the correct method to get da
 - `ohlcv(pair, timeframe)` - Currently cached candle (OHLCV) data for the pair, returns DataFrame or empty DataFrame.
 - [`orderbook(pair, maximum)`](#orderbookpair-maximum) - Returns latest orderbook data for the pair, a dict with bids/asks with a total of `maximum` entries.
 - [`ticker(pair)`](#tickerpair) - Returns current ticker data for the pair. See [ccxt documentation](https://github.com/ccxt/ccxt/wiki/Manual#price-tickers) for more details on the Ticker data structure.
+- [`funding_rate(pair)`](#funding_ratepair) - Returns current funding rate data for the pair.
 - `runmode` - Property containing the current runmode.
 
 ### Example Usages
@@ -854,6 +855,8 @@ dataframe, last_updated = self.dp.get_analyzed_dataframe(pair=metadata['pair'],
 
 ### *orderbook(pair, maximum)*
 
+Retrieve the current order book for a pair.
+
 ``` python
 if self.dp.runmode.value in ('live', 'dry_run'):
     ob = self.dp.orderbook(metadata['pair'], 1)
@@ -902,6 +905,53 @@ if self.dp.runmode.value in ('live', 'dry_run'):
 
 !!! Warning "Warning about backtesting"
     This method will always return up-to-date / real-time values. As such, usage during backtesting / hyperopt without runmode checks will lead to wrong results, e.g. your whole dataframe will contain the same single value in all rows.
+
+### *funding_rate(pair)*
+
+Retrieves the current funding rate for the pair and only works for futures pairs in the format of `base/quote:settle` (e.g. `ETH/USDT:USDT`).
+
+``` python
+if self.dp.runmode.value in ('live', 'dry_run'):
+    funding_rate = self.dp.funding_rate(metadata['pair'])
+    dataframe['current_funding_rate'] = funding_rate['fundingRate']
+    dataframe['next_funding_timestamp'] = funding_rate['fundingTimestamp']
+    dataframe['next_funding_datetime'] = funding_rate['fundingDatetime']
+```
+
+The funding rate structure is aligned with the funding rate structure from [ccxt](https://github.com/ccxt/ccxt/wiki/Manual#funding-rate-structure), so the result will be formatted as follows:
+
+``` python
+{
+    "info": {
+        # ... 
+    },
+    "symbol": "BTC/USDT:USDT",
+    "markPrice": 110730.7,
+    "indexPrice": 110782.52,
+    "interestRate": 0.0001,
+    "estimatedSettlePrice": 110822.67200153,
+    "timestamp": 1757146321001,
+    "datetime": "2025-09-06T08:12:01.001Z",
+    "fundingRate": 5.609e-05,
+    "fundingTimestamp": 1757174400000,
+    "fundingDatetime": "2025-09-06T16:00:00.000Z",
+    "nextFundingRate": None,
+    "nextFundingTimestamp": None,
+    "nextFundingDatetime": None,
+    "previousFundingRate": None,
+    "previousFundingTimestamp": None,
+    "previousFundingDatetime": None,
+    "interval": None,
+}
+```
+
+Therefore, using `funding_rate['fundingRate']` as demonstrated above will use the current funding rate.
+Actually available data will vary between exchanges, so this code may not work as expected across exchanges.
+
+!!! Warning "Warning about backtesting"
+    Current funding-rate is not part of the historic data which means backtesting and hyperopt will not work correctly if this method is used, as the method will return up-to-date values.
+    We recommend to use the historically available funding rate for backtesting (which is automatically downloaded, and is at the frequency of what the exchange provides, usually 4h or 8h).
+    `self.dp.get_pair_dataframe(pair=metadata['pair'], timeframe='8h', candle_type="funding_rate")`
 
 ### Send Notification
 
@@ -1068,7 +1118,7 @@ To verify if a pair is currently locked, use `self.is_pair_locked(pair)`.
 ``` python
 from freqtrade.persistence import Trade
 from datetime import timedelta, datetime, timezone
-# Put the above lines a the top of the strategy file, next to all the other imports
+# Put the above lines at the top of the strategy file, next to all the other imports
 # --------
 
 # Within populate indicators (or populate_entry_trend):
@@ -1122,6 +1172,7 @@ The following list contains some common patterns which should be avoided to prev
 - don't use `.iloc[-1]` or any other absolute position in the dataframe within `populate_` functions, as this will be different between dry-run and backtesting. Absolute `iloc` indexing is safe to use in callbacks however - see [Strategy Callbacks](strategy-callbacks.md).
 - don't use functions that use all dataframe or column values, e.g. `dataframe['mean_volume'] = dataframe['volume'].mean()`. As backtesting uses the full dataframe, at any point in the dataframe, the `'mean_volume'` series would include data from the future. Use rolling() calculations instead, e.g. `dataframe['volume'].rolling(<window>).mean()`.
 - don't use `.resample('1h')`. This uses the left border of the period interval, so moves data from an hour boundary to the start of the hour. Use `.resample('1h', label='right')` instead.
+- don't use `.merge()` to combine longer timeframes onto shorter ones. Instead, use the [informative pair](#informative-pairs) helpers. (A plain merge can implicitly cause a lookahead bias as date refers to open date, not close date).
 
 !!! Tip "Identifying problems"
     You should always use the two helper commands [lookahead-analysis](lookahead-analysis.md) and [recursive-analysis](recursive-analysis.md), which can each help you figure out problems with your strategy in different ways.

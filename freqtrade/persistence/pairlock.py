@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, ClassVar
 
 from sqlalchemy import ScalarResult, String, or_, select
@@ -39,7 +39,7 @@ class PairLock(ModelBase):
 
     @staticmethod
     def query_pair_locks(
-        pair: str | None, now: datetime, side: str = "*"
+        pair: str | None, now: datetime, side: str | None = None
     ) -> ScalarResult["PairLock"]:
         """
         Get all currently active locks for this pair
@@ -53,9 +53,9 @@ class PairLock(ModelBase):
         ]
         if pair:
             filters.append(PairLock.pair == pair)
-        if side != "*":
+        if side is not None and side != "*":
             filters.append(or_(PairLock.side == side, PairLock.side == "*"))
-        else:
+        elif side is not None:
             filters.append(PairLock.side == "*")
 
         return PairLock.session.scalars(select(PairLock).filter(*filters))
@@ -69,11 +69,9 @@ class PairLock(ModelBase):
             "id": self.id,
             "pair": self.pair,
             "lock_time": self.lock_time.strftime(DATETIME_PRINT_FORMAT),
-            "lock_timestamp": int(self.lock_time.replace(tzinfo=timezone.utc).timestamp() * 1000),
+            "lock_timestamp": int(self.lock_time.replace(tzinfo=UTC).timestamp() * 1000),
             "lock_end_time": self.lock_end_time.strftime(DATETIME_PRINT_FORMAT),
-            "lock_end_timestamp": int(
-                self.lock_end_time.replace(tzinfo=timezone.utc).timestamp() * 1000
-            ),
+            "lock_end_timestamp": int(self.lock_end_time.replace(tzinfo=UTC).timestamp() * 1000),
             "reason": self.reason,
             "side": self.side,
             "active": self.active,

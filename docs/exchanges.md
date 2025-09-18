@@ -118,7 +118,7 @@ When trading on Binance Futures market, orderbook must be used because there is 
   },
 ```
 
-#### Binance futures settings
+#### Binance isolated futures settings
 
 Users will also have to have the futures-setting "Position Mode" set to "One-way Mode", and "Asset Mode" set to "Single-Asset Mode".
 These settings will be checked on startup, and freqtrade will show an error if this setting is wrong.
@@ -126,6 +126,27 @@ These settings will be checked on startup, and freqtrade will show an error if t
 ![Binance futures settings](assets/binance_futures_settings.png)
 
 Freqtrade will not attempt to change these settings.
+
+#### Binance BNFCR futures
+
+BNFCR mode are a special type of futures mode on Binance to work around regulatory issues in Europe.  
+To use BNFCR futures, you will have to have the following combination of settings:
+
+``` jsonc
+{
+    // ...
+    "trading_mode": "futures",
+    "margin_mode": "cross",
+    "proxy_coin": "BNFCR",
+    "stake_currency": "USDT" // or "USDC"
+    // ...
+}
+```
+
+The `stake_currency` setting defines the markets the bot will be operating in. This choice is really arbitrary.
+
+On the exchange, you'll have to use "Multi-asset Mode" - and "Position Mode set to "One-way Mode".  
+Freqtrade will check these settings on startup, but won't attempt to change them.
 
 ## Bingx
 
@@ -189,7 +210,7 @@ freqtrade download-data --exchange kraken --dl-trades -p BTC/EUR BCH/EUR
     It will also take a long time, as freqtrade will need to download every single trade that happened on the exchange for the pair / timerange combination, therefore please be patient.
 
 !!! Warning "rateLimit tuning"
-    Please pay attention that rateLimit configuration entry holds delay in milliseconds between requests, NOT requests\sec rate.
+    Please pay attention that rateLimit configuration entry holds delay in milliseconds between requests, NOT requests/sec rate.
     So, in order to mitigate Kraken API "Rate limit exceeded" exception, this configuration should be increased, NOT decreased.
 
 ## Kucoin
@@ -206,7 +227,7 @@ Kucoin requires a passphrase for each api key, you will therefore need to add th
 }
 ```
 
-Kucoin supports [time_in_force](configuration.md#understand-order_time_in_force).
+Kucoin supports [time_in_force](configuration.md#understand-order_time_in_force) with settings "GTC" (good till cancelled), "FOK" (full-or-cancel) and "IOC" (immediate-or-cancel) settings.
 
 !!! Tip "Stoploss on Exchange"
     Kucoin supports `stoploss_on_exchange` and can use both stop-loss-market and stop-loss-limit orders. It provides great advantages, so we recommend to benefit from it.
@@ -217,12 +238,12 @@ Kucoin supports [time_in_force](configuration.md#understand-order_time_in_force)
 For Kucoin, it is suggested to add `"KCS/<STAKE>"` to your blacklist to avoid issues, unless you are willing to maintain enough extra `KCS` on the account or unless you're willing to disable using `KCS` for fees. 
 Kucoin accounts may use `KCS` for fees, and if a trade happens to be on `KCS`, further trades may consume this position and make the initial `KCS` trade unsellable as the expected amount is not there anymore.
 
-## HTX (formerly Huobi)
+## HTX
 
 !!! Tip "Stoploss on Exchange"
     HTX supports `stoploss_on_exchange` and uses `stop-limit` orders. It provides great advantages, so we recommend to benefit from it by enabling stoploss on exchange.
 
-## OKX (former OKEX)
+## OKX
 
 OKX requires a passphrase for each api key, you will therefore need to add this key into the configuration so your exchange section looks as follows:
 
@@ -236,6 +257,9 @@ OKX requires a passphrase for each api key, you will therefore need to add this 
 }
 ```
 
+If you've registered with OKX on the host my.okx.com (OKX EAA)- you will need to use `"myokx"` as the exchange name.
+Using the wrong exchange will result in the error "OKX Error 50119: API key doesn't exist" - as the 2 are separate entities.
+
 !!! Warning
     OKX only provides 100 candles per api call. Therefore, the strategy will only have a pretty low amount of data available in backtesting mode.
 
@@ -247,7 +271,9 @@ OKX requires a passphrase for each api key, you will therefore need to add this 
 ## Gate.io
 
 !!! Tip "Stoploss on Exchange"
-    Gate.io supports `stoploss_on_exchange` and uses `stop-loss-limit` orders. It provides great advantages, so we recommend to benefit from it by enabling stoploss on exchange..
+    Gate.io supports `stoploss_on_exchange` and uses `stop-loss-limit` orders. It provides great advantages, so we recommend to benefit from it by enabling stoploss on exchange.
+
+Gate.io supports [time_in_force](configuration.md#understand-order_time_in_force) with settings "GTC" (good till cancelled), and "IOC" (immediate-or-cancel) settings.
 
 Gate.io allows the use of `POINT` to pay for fees. As this is not a tradable currency (no regular market available), automatic fee calculations will fail (and default to a fee of 0).
 The configuration parameter `exchange.unknown_fee_rate` can be used to specify the exchange rate between Point and the stake currency. Obviously, changing the stake-currency will also require changes to this value.
@@ -262,9 +288,15 @@ Without these permissions, the bot will not start correctly and show errors like
 
 ## Bybit
 
-Futures trading on bybit is currently supported for USDT markets, and will use isolated futures mode.
+!!! Tip "Stoploss on Exchange"
+    Bybit (futures only) supports `stoploss_on_exchange` and uses `stop-loss-limit` orders. It provides great advantages, so we recommend to benefit from it by enabling stoploss on exchange.
+    On futures, Bybit supports both `stop-limit` as well as `stop-market` orders. You can use either `"limit"` or `"market"` in the `order_types.stoploss` configuration setting to decide which type to use.
 
-On startup, freqtrade will set the position mode to "One-way Mode" for the whole (sub)account. This avoids making this call over and over again (slowing down bot operations), but means that changes to this setting may result in exceptions and errors.
+Bybit supports [time_in_force](configuration.md#understand-order_time_in_force) with settings "GTC" (good till cancelled), "FOK" (full-or-cancel), "IOC" (immediate-or-cancel) and "PO" (Post only) settings.
+
+Futures trading on bybit is currently supported for isolated futures mode.
+
+On startup, freqtrade will set the position mode to "One-way Mode" for the whole (sub)account. This avoids making this call over and over again (slowing down bot operations), but means that manual changes to this setting may result in exceptions and errors.
 
 As bybit doesn't provide funding rate history, the dry-run calculation is used for live trades as well.
 
@@ -280,11 +312,6 @@ We do strongly recommend to limit all API keys to the IP you're going to use it 
     Freqtrade assumes accounts to be dedicated to the bot.
     We therefore recommend the usage of one subaccount per bot. This is especially important when using unified accounts.  
     Other configurations (multiple bots on one account, manual non-bot trades on the bot account) are not supported and may lead to unexpected behavior.
-
-
-!!! Tip "Stoploss on Exchange"
-    Bybit (futures only) supports `stoploss_on_exchange` and uses `stop-loss-limit` orders. It provides great advantages, so we recommend to benefit from it by enabling stoploss on exchange.
-    On futures, Bybit supports both `stop-limit` as well as `stop-market` orders. You can use either `"limit"` or `"market"` in the `order_types.stoploss` configuration setting to decide which type to use.
 
 ## Bitmart
 
@@ -304,6 +331,26 @@ It's therefore required to pass the UID as well.
 !!! Warning "Necessary Verification"
     Bitmart requires Verification Lvl2 to successfully trade on the spot market through the API - even though trading via UI works just fine with just Lvl1 verification.
 
+## Bitget
+
+Bitget requires a passphrase for each api key, you will therefore need to add this key into the configuration so your exchange section looks as follows:
+
+```json
+"exchange": {
+    "name": "bitget",
+    "key": "your_exchange_key",
+    "secret": "your_exchange_secret",
+    "password": "your_exchange_api_key_password",
+    // ...
+}
+```
+
+Bitget supports [time_in_force](configuration.md#understand-order_time_in_force) with settings "GTC" (good till cancelled), "FOK" (full-or-cancel), "IOC" (immediate-or-cancel) and "PO" (Post only) settings.
+
+!!! Tip "Stoploss on Exchange"
+    Bitget supports `stoploss_on_exchange` and can use both stop-loss-market and stop-loss-limit orders. It provides great advantages, so we recommend to benefit from it.
+    You can use either `"limit"` or `"market"` in the `order_types.stoploss` configuration setting to decide which type of stoploss shall be used.
+
 ## Hyperliquid
 
 !!! Tip "Stoploss on Exchange"
@@ -315,13 +362,13 @@ This needs to be configured like this:
 ```json
 "exchange": {
     "name": "hyperliquid",
-    "walletAddress": "your_eth_wallet_address",
+    "walletAddress": "your_eth_wallet_address",  // This should NOT be your API Wallet Address!
     "privateKey": "your_api_private_key",
     // ...
 }
 ```
 
-* walletAddress in hex format: `0x<40 hex characters>` - Can be easily copied from your wallet - and should be your wallet address, not your API Wallet Address.
+* walletAddress in hex format: `0x<40 hex characters>` - Can be easily copied from your wallet - and should be your main wallet address, not your API Wallet Address.
 * privateKey in hex format: `0x<64 hex characters>` - Use the key the API Wallet shows on creation.
 
 Hyperliquid handles deposits and withdrawals on the Arbitrum One chain, a Layer 2 scaling solution built on top of Ethereum. Hyperliquid uses USDC as quote / collateral. The process of depositing USDC on Hyperliquid requires a couple of steps, see [how to start trading](https://hyperliquid.gitbook.io/hyperliquid-docs/onboarding/how-to-start-trading) for details on what steps are needed.
@@ -338,6 +385,50 @@ Hyperliquid handles deposits and withdrawals on the Arbitrum One chain, a Layer 
     * Don't use the same mnemonic as the one you had to backup when initializing a hardware wallet, using the same mnemonic basically deletes the security of your hardware wallet.
     * Create a different software wallet, only transfer the funds you want to trade with to that wallet, and use that wallet to trade on Hyperliquid.
     * If you have funds you don't want to use for trading (after making a profit for example), transfer them back to your hardware wallet.
+
+### Hyperliquid Vault / Subaccount
+
+Hyperliquid allows you to create either a vault or a subaccount.  
+To use these with Freqtrade, you will need to use the following configuration pattern:
+
+``` json
+"exchange": {
+    "name": "hyperliquid",
+    "walletAddress": "your_vault_address",  // Vault or subaccount address
+    "privateKey": "your_api_private_key",
+    "ccxt_config": {
+        "options": {
+            "vaultAddress": "your_vault_address" // Optional, only if you want to use a vault or subaccount
+        }
+    },
+    // ...
+}
+```
+
+Your balance and trades will now be used from your vault / subaccount - and no longer from your main account.
+
+### Historic Hyperliquid data
+
+The Hyperliquid API does not provide historic data beyond the single call to fetch current data, so downloading data is not possible, as the downloaded data would not constitute proper historic data.
+
+## Bitvavo
+
+If your account is required to use an operatorId, you can set it in the configuration file as follows:
+
+``` json
+"exchange": {
+        "name": "bitvavo",
+        "key": "",
+        "secret": "",
+        "ccxt_config": {
+            "options": {
+                "operatorId": "123567"
+            }
+        },
+   }
+```
+
+Bitvavo expects the `operatorId` to be an integer.
 
 ## All exchanges
 

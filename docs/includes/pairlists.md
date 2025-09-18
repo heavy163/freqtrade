@@ -44,9 +44,24 @@ You may also use something like `.*DOWN/BTC` or `.*UP/BTC` to exclude leveraged 
 
 By default, the `StaticPairList` method is used, which uses a statically defined pair whitelist from the configuration. The pairlist also supports wildcards (in regex-style) - so `.*/BTC` will include all pairs with BTC as a stake.
 
-It uses configuration from `exchange.pair_whitelist` and `exchange.pair_blacklist`.
+It uses configuration from `exchange.pair_whitelist` and `exchange.pair_blacklist`, which in the below example, will trade BTC/USDT and ETH/USDT - and will prevent BNB/USDT trading.
+
+Both `pair_*list` parameters support regex - so values like  `.*/USDT` would enable trading all pairs that are not in the blacklist.
 
 ```json
+"exchange": {
+    "name": "...",
+    // ... 
+    "pair_whitelist": [
+        "BTC/USDT",
+        "ETH/USDT",
+        // ...
+    ],
+    "pair_blacklist": [
+        "BNB/USDT",
+        // ...
+    ]
+},
 "pairlists": [
     {"method": "StaticPairList"}
 ],
@@ -374,8 +389,13 @@ The `refresh_period` setting defines the interval (in seconds) at which the mark
 The `categories` setting specifies the [coingecko categories](https://www.coingecko.com/en/categories) from which to select coins from. The default is an empty list `[]`, meaning no category filtering is applied.
 If an incorrect category string is chosen, the plugin will print the available categories from CoinGecko and fail. The category should be the ID of the category, for example, for `https://www.coingecko.com/en/categories/layer-1`, the category ID would be `layer-1`. You can pass multiple categories such as `["layer-1", "meme-token"]` to select from several categories.
 
+Coins like 1000PEPE/USDT or KPEPE/USDT:USDT are detected on a best effort basis, with the prefixes `1000` and `K` being used to identify them.
+
 !!! Warning "Many categories"
     Each added category corresponds to one API call to CoinGecko. The more categories you add, the longer the pairlist generation will take, potentially causing rate limit issues.
+
+!!! Danger "Duplicate symbols in coingecko"
+    Coingecko often has duplicate symbols, where the same symbol is used for different coins. Freqtrade will use the symbol as is and try to search for it on the exchange. If the symbol exists - it will be used. Freqtrade will however not check if the _intended_ symbol is the one coingecko meant. This can sometimes lead to unexpected results, especially on low volume coins or with meme coin categories.
 
 #### AgeFilter
 

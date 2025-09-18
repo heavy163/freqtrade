@@ -49,7 +49,7 @@ def test_ohlcv_to_dataframe(ohlcv_history_list, caplog):
 
 def test_trades_to_ohlcv(trades_history_df, caplog):
     caplog.set_level(logging.DEBUG)
-    with pytest.raises(ValueError, match="Trade-list empty."):
+    with pytest.raises(ValueError, match=r"Trade-list empty\."):
         trades_to_ohlcv(pd.DataFrame(columns=trades_history_df.columns), "1m")
 
     df = trades_to_ohlcv(trades_history_df, "1m")
@@ -120,8 +120,7 @@ def test_ohlcv_fill_up_missing_data(testdatadir, caplog):
     assert (data.columns == data2.columns).all()
 
     assert log_has_re(
-        f"Missing data fillup for UNITTEST/BTC, 1m: before: "
-        f"{len(data)} - after: {len(data2)}.*",
+        f"Missing data fillup for UNITTEST/BTC, 1m: before: {len(data)} - after: {len(data2)}.*",
         caplog,
     )
 

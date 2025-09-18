@@ -54,6 +54,7 @@ def __run_pairlist(job_id: str, config_loc: Config):
 
         with FtNoDBContext():
             exchange = get_exchange(config_loc)
+            config_loc["candle_type_def"] = exchange._config["candle_type_def"]
             pairlists = PairListManager(exchange, config_loc)
             pairlists.refresh_pairlist()
             ApiBG.jobs[job_id]["result"] = {
@@ -110,13 +111,17 @@ def handleExchangePayload(payload: ExchangeModePayloadMixin, config_loc: Config)
     Handle exchange and trading mode payload.
     Updates the configuration with the payload values.
     """
+    from freqtrade.configuration.directory_operations import create_datadir
+
     if payload.exchange:
         config_loc["exchange"]["name"] = payload.exchange
+        config_loc.update({"datadir": create_datadir(config_loc, None)})
     if payload.trading_mode:
         config_loc["trading_mode"] = payload.trading_mode
         config_loc["candle_type_def"] = CandleType.get_default(
             config_loc.get("trading_mode", "spot") or "spot"
         )
+
     if payload.margin_mode:
         config_loc["margin_mode"] = payload.margin_mode
 

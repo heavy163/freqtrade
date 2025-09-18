@@ -1,10 +1,10 @@
 # Hyperopt
 
 This page explains how to tune your strategy by finding the optimal
-parameters, a process called hyperparameter optimization. The bot uses algorithms included in the `scikit-optimize` package to accomplish this.
+parameters, a process called hyperparameter optimization. The bot uses algorithms included in the `optuna` package to accomplish this.
 The search will burn all your CPU cores, make your laptop sound like a fighter jet and still take a long time.
 
-In general, the search for best parameters starts with a few random combinations (see [below](#reproducible-results) for more details) and then uses Bayesian search with a ML regressor algorithm (currently ExtraTreesRegressor) to quickly find a combination of parameters in the search hyperspace that minimizes the value of the [loss function](#loss-functions).
+In general, the search for best parameters starts with a few random combinations (see [below](#reproducible-results) for more details) and then uses one of optuna's sampler algorithms (currently NSGAIIISampler) to quickly find a combination of parameters in the search hyperspace that minimizes the value of the [loss function](#loss-functions).
 
 Hyperopt requires historic data to be available, just as backtesting does (hyperopt runs backtesting many times with different parameters).
 To learn how to get data for the pairs and exchange you're interested in, head over to the [Data Downloading](data-download.md) section of the documentation.
@@ -36,127 +36,7 @@ pip install -r requirements-hyperopt.txt
 
 ## Hyperopt command reference
 
-```
-usage: freqtrade hyperopt [-h] [-v] [--logfile FILE] [-V] [-c PATH] [-d PATH]
-                          [--userdir PATH] [-s NAME] [--strategy-path PATH]
-                          [--recursive-strategy-search] [--freqaimodel NAME]
-                          [--freqaimodel-path PATH] [-i TIMEFRAME]
-                          [--timerange TIMERANGE]
-                          [--data-format-ohlcv {json,jsongz,hdf5,feather,parquet}]
-                          [--max-open-trades INT]
-                          [--stake-amount STAKE_AMOUNT] [--fee FLOAT]
-                          [-p PAIRS [PAIRS ...]] [--hyperopt-path PATH]
-                          [--eps] [--enable-protections]
-                          [--dry-run-wallet DRY_RUN_WALLET]
-                          [--timeframe-detail TIMEFRAME_DETAIL] [-e INT]
-                          [--spaces {all,buy,sell,roi,stoploss,trailing,protection,trades,default} [{all,buy,sell,roi,stoploss,trailing,protection,trades,default} ...]]
-                          [--print-all] [--no-color] [--print-json] [-j JOBS]
-                          [--random-state INT] [--min-trades INT]
-                          [--hyperopt-loss NAME] [--disable-param-export]
-                          [--ignore-missing-spaces] [--analyze-per-epoch]
-
-options:
-  -h, --help            show this help message and exit
-  -i TIMEFRAME, --timeframe TIMEFRAME
-                        Specify timeframe (`1m`, `5m`, `30m`, `1h`, `1d`).
-  --timerange TIMERANGE
-                        Specify what timerange of data to use.
-  --data-format-ohlcv {json,jsongz,hdf5,feather,parquet}
-                        Storage format for downloaded candle (OHLCV) data.
-                        (default: `feather`).
-  --max-open-trades INT
-                        Override the value of the `max_open_trades`
-                        configuration setting.
-  --stake-amount STAKE_AMOUNT
-                        Override the value of the `stake_amount` configuration
-                        setting.
-  --fee FLOAT           Specify fee ratio. Will be applied twice (on trade
-                        entry and exit).
-  -p PAIRS [PAIRS ...], --pairs PAIRS [PAIRS ...]
-                        Limit command to these pairs. Pairs are space-
-                        separated.
-  --hyperopt-path PATH  Specify additional lookup path for Hyperopt Loss
-                        functions.
-  --eps, --enable-position-stacking
-                        Allow buying the same pair multiple times (position
-                        stacking).
-  --enable-protections, --enableprotections
-                        Enable protections for backtesting.Will slow
-                        backtesting down by a considerable amount, but will
-                        include configured protections
-  --dry-run-wallet DRY_RUN_WALLET, --starting-balance DRY_RUN_WALLET
-                        Starting balance, used for backtesting / hyperopt and
-                        dry-runs.
-  --timeframe-detail TIMEFRAME_DETAIL
-                        Specify detail timeframe for backtesting (`1m`, `5m`,
-                        `30m`, `1h`, `1d`).
-  -e INT, --epochs INT  Specify number of epochs (default: 100).
-  --spaces {all,buy,sell,roi,stoploss,trailing,protection,trades,default} [{all,buy,sell,roi,stoploss,trailing,protection,trades,default} ...]
-                        Specify which parameters to hyperopt. Space-separated
-                        list.
-  --print-all           Print all results, not only the best ones.
-  --no-color            Disable colorization of hyperopt results. May be
-                        useful if you are redirecting output to a file.
-  --print-json          Print output in JSON format.
-  -j JOBS, --job-workers JOBS
-                        The number of concurrently running jobs for
-                        hyperoptimization (hyperopt worker processes). If -1
-                        (default), all CPUs are used, for -2, all CPUs but one
-                        are used, etc. If 1 is given, no parallel computing
-                        code is used at all.
-  --random-state INT    Set random state to some positive integer for
-                        reproducible hyperopt results.
-  --min-trades INT      Set minimal desired number of trades for evaluations
-                        in the hyperopt optimization path (default: 1).
-  --hyperopt-loss NAME, --hyperoptloss NAME
-                        Specify the class name of the hyperopt loss function
-                        class (IHyperOptLoss). Different functions can
-                        generate completely different results, since the
-                        target for optimization is different. Built-in
-                        Hyperopt-loss-functions are:
-                        ShortTradeDurHyperOptLoss, OnlyProfitHyperOptLoss,
-                        SharpeHyperOptLoss, SharpeHyperOptLossDaily,
-                        SortinoHyperOptLoss, SortinoHyperOptLossDaily,
-                        CalmarHyperOptLoss, MaxDrawDownHyperOptLoss,
-                        MaxDrawDownRelativeHyperOptLoss,
-                        ProfitDrawDownHyperOptLoss
-  --disable-param-export
-                        Disable automatic hyperopt parameter export.
-  --ignore-missing-spaces, --ignore-unparameterized-spaces
-                        Suppress errors for any requested Hyperopt spaces that
-                        do not contain any parameters.
-  --analyze-per-epoch   Run populate_indicators once per epoch.
-
-Common arguments:
-  -v, --verbose         Verbose mode (-vv for more, -vvv to get all messages).
-  --logfile FILE, --log-file FILE
-                        Log to the file specified. Special values are:
-                        'syslog', 'journald'. See the documentation for more
-                        details.
-  -V, --version         show program's version number and exit
-  -c PATH, --config PATH
-                        Specify configuration file (default:
-                        `userdir/config.json` or `config.json` whichever
-                        exists). Multiple --config options may be used. Can be
-                        set to `-` to read config from stdin.
-  -d PATH, --datadir PATH, --data-dir PATH
-                        Path to directory with historical backtesting data.
-  --userdir PATH, --user-data-dir PATH
-                        Path to userdata directory.
-
-Strategy arguments:
-  -s NAME, --strategy NAME
-                        Specify strategy class name which will be used by the
-                        bot.
-  --strategy-path PATH  Specify additional strategy lookup path.
-  --recursive-strategy-search
-                        Recursively search for a strategy in the strategies
-                        folder.
-  --freqaimodel NAME    Specify a custom freqaimodels.
-  --freqaimodel-path PATH
-                        Specify additional lookup path for freqaimodels.
-
-```
+--8<-- "commands/hyperopt.md"
 
 ### Hyperopt checklist
 
@@ -591,6 +471,7 @@ Currently, the following loss functions are builtin:
 * `SortinoHyperOptLossDaily` - optimizes Sortino Ratio calculated on **daily** trade returns relative to **downside** standard deviation.
 * `MaxDrawDownHyperOptLoss` - Optimizes Maximum absolute drawdown.
 * `MaxDrawDownRelativeHyperOptLoss` -  Optimizes both maximum absolute drawdown while also adjusting for maximum relative drawdown.
+* `MaxDrawDownPerPairHyperOptLoss` - Calculates the profit/drawdown ratio per pair and returns the worst result as objective, forcing hyperopt to optimize the parameters for all pairs in the pairlist. This way, we prevent one or more pairs with good results from inflating the metrics, while the pairs with poor results are not represented and therefore not optimized.
 * `CalmarHyperOptLoss` - Optimizes Calmar Ratio calculated on trade returns relative to max drawdown.
 * `ProfitDrawDownHyperOptLoss` - Optimizes by max Profit & min Drawdown objective. `DRAWDOWN_MULT` variable within the hyperoptloss file can be adjusted to be stricter or more flexible on drawdown purposes.
 * `MultiMetricHyperOptLoss` -  Optimizes by several key metrics to achieve balanced performance. The primary focus is on maximizing Profit and minimizing Drawdown, while also considering additional metrics such as Profit Factor, Expectancy Ratio and Winrate. Moreover, it applies a penalty for epochs with a low number of trades, encouraging strategies with adequate trade frequency.
@@ -609,6 +490,8 @@ freqtrade hyperopt --config config.json --hyperopt-loss <hyperoptlossname> --str
 ```
 
 The `-e` option will set how many evaluations hyperopt will do. Since hyperopt uses Bayesian search, running too many epochs at once may not produce greater results. Experience has shown that best results are usually not improving much after 500-1000 epochs.  
+The `--early-stop` option will set after how many epochs with no improvements hyperopt will stop. A good value is 20-30% of the total epochs. Any value greater than 0 and lower than 20 it will be replaced by 20. Early stop is by default disabled (`--early-stop=0`)
+
 Doing multiple runs (executions) with a few 1000 epochs and different random state will most likely produce different results.
 
 The `--spaces all` option determines that all possible parameters should be optimized. Possibilities are listed below.
@@ -651,7 +534,7 @@ Legal values are:
 * `trailing`: search for the best trailing stop values
 * `trades`: search for the best max open trades values
 * `protection`: search for the best protection parameters (read the [protections section](#optimizing-protections) on how to properly define these)
-* `default`: `all` except `trailing` and `protection`
+* `default`: `all` except `trailing`, `trades` and `protection`
 * space-separated list of any of the above values for example `--spaces roi stoploss`
 
 The default Hyperopt Search Space, used when no `--space` command line option is specified, does not include the `trailing` hyperspace. We recommend you to run optimization for the `trailing` hyperspace separately, when the best parameters for other hyperspaces were found, validated and pasted into your custom strategy.
