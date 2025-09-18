@@ -115,6 +115,8 @@ class FtPostion(ModelBase):
     latest_high: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
     latest_low: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
     is_monitor: Mapped[bool] = mapped_column(Boolean, nullable=True)
+    funding_time: Mapped[Optional[datetime]] = mapped_column(nullable=True)
+    funding_rate: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -150,6 +152,8 @@ class FtPostion(ModelBase):
             "latest_high": self.latest_high,
             "latest_low": self.latest_low,
             "is_monitor": self.is_monitor,
+            "funding_time": self.funding_time,
+            "funding_rate": self.funding_rate,
         }
 
 class FtPostionRecord(ModelBase):
@@ -181,7 +185,9 @@ class FtPostionRecord(ModelBase):
     latest_high: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
     latest_low: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
     is_monitor: Mapped[bool] = mapped_column(Boolean, nullable=True)
-
+    funding_time: Mapped[Optional[datetime]] = mapped_column(nullable=True)
+    funding_rate: Mapped[Optional[float]] = mapped_column(Float(), nullable=True)
+    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -216,4 +222,6 @@ class FtPostionRecord(ModelBase):
             "latest_high": self.latest_high,
             "latest_low": self.latest_low,
             "is_monitor": self.is_monitor,
+            "funding_time": self.funding_time,
+            "funding_rate": self.funding_rate,
         }
