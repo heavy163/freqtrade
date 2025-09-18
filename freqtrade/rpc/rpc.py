@@ -35,7 +35,8 @@ from freqtrade.exchange import Exchange, timeframe_to_minutes, timeframe_to_msec
 from freqtrade.exchange.exchange_utils import price_to_precision
 from freqtrade.ft_types import AnnotationType
 from freqtrade.loggers import bufferHandler
-from freqtrade.persistence import CustomDataWrapper, KeyValueStore, Order, PairLocks, Trade, dbhelper
+from freqtrade.persistence import CustomDataWrapper, KeyValueStore, Order, PairLocks, Trade
+from freqtrade.persistence import dbhelper
 from freqtrade.persistence.models import PairLock, custom_data_rpc_wrapper
 from freqtrade.persistence.trade_model_ext import FtPostion, FtPostionRecord, FtPrediction
 from freqtrade.plugins.pairlist.pairlist_helpers import expand_pairlist
@@ -52,6 +53,7 @@ from freqtrade.util import (
     shorten_date,
 )
 from freqtrade.wallets import PositionWallet, Wallet
+from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 
@@ -1700,7 +1702,7 @@ class RPC:
     def _get_market_direction(self) -> MarketDirection:
         return self._freqtrade.strategy.market_direction
 
-    def _insert_predictions(self, prediction_df: pd.DataFrame) -> Optional[int]:
+    def _insert_predictions(self, prediction_df: pd.DataFrame) -> int|None:
         if prediction_df is not None and len(prediction_df) > 0:
             model = prediction_df.iloc[0]["model"]
             prediction_df = prediction_df[prediction_df["model"] == model]
@@ -1720,7 +1722,7 @@ class RPC:
         return -1
 
     def _get_current_positions(
-        self, strategy: Optional[str] = None, strategy_id: Optional[int] = None
+        self, strategy: str|None = None, strategy_id: str|None = None
     ) -> list:
         filters = []
         if strategy is not None:
@@ -1738,9 +1740,9 @@ class RPC:
 
     def get_latest_prediction(
         self,
-        model: Optional[str] = None,
-        model_name: Optional[str] = None,
-        pair: Optional[str] = None,
+        model: str|None = None,
+        model_name: str|None = None,
+        pair: str|None = None,
     ) -> list[dict]:
         filters = []
         if model is not None:
@@ -1766,9 +1768,9 @@ class RPC:
 
     def get_latest_position_record(
         self,
-        strategy: Optional[str] = None,
-        strategy_id: Optional[int] = None,
-        pair: Optional[str] = None,
+        strategy: str|None = None,
+        strategy_id: int|None = None,
+        pair: str|None = None,
     ) -> list[dict]:
         filters = []
         if strategy is not None:
@@ -1791,10 +1793,10 @@ class RPC:
 
     def _get_position_records(
         self,
-        strategy: Optional[str] = None,
-        strategy_id: Optional[int] = None,
-        start: Optional[datetime] = None,
-        end: Optional[datetime] = None,
+        strategy: str|None = None,
+        strategy_id: int|None = None,
+        start: datetime|None = None,
+        end: datetime|None = None,
     ) -> list[dict]:
         filters = []
         if strategy is not None:
