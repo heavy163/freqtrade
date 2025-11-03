@@ -11,9 +11,10 @@ from freqtrade.rpc.api_server.api_schemas import (
     CommonResponse,
     FtPostionSchema,
     FtPredictionSchema,
+    FtSpotKlineSchema,
 )
 from freqtrade.rpc.api_server.deps import get_rpc
-
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,18 @@ def add_prediction(predictions: list[FtPredictionSchema], rpc: RPC = Depends(get
 
     logger.info(f"Inserting predictions result {rows}")
     return {"code": 0, "messaged": "ok", "data": f"{rows}"}
+
+
+@router.post("/spot_kline", response_model=CommonResponse, tags=["prediction"])
+def add_spot_kline(records: list[FtSpotKlineSchema], rpc: RPC = Depends(get_rpc)):
+    """Insert predictions"""
+    logger.info(f"save {len(records)} spot klines start")
+    data_array = [p.to_row() for p in records]
+    data_df = pd.DataFrame(data=data_array, columns=FtPredictionSchema.data_columns())
+    cahe_file = Path(f"user_data/spot_kline/{datetime.now().strftime('%Y%m%d_%H')}.csv")
+    cahe_file.parent.mkdir(parents=True, exist_ok=True)
+    data_df.to_csv(cahe_file)
+    return {"code": 0, "messaged": "ok", "data": ""}
 
 
 @router.get("/position/records", response_model=list[FtPostionSchema], tags=["position"])

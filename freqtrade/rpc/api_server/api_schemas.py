@@ -708,6 +708,25 @@ class FtPredictionSchema(BaseModel):
             self.rank_sharpe,
         ]
 
+class FtSpotKlineSchema(BaseModel):
+    close_time: datetime
+    pair: str
+    close: float | None = None
+
+    @staticmethod
+    def data_columns():
+        return [
+            "close_time",
+            "pair",
+            "close",
+        ]
+
+    def to_row(self):
+        return [
+            self.close_time,
+            self.pair,
+            self.close,
+        ]
 
 class FtPostionSchema(BaseModel):
     pair: str
