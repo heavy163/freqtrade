@@ -283,17 +283,17 @@ class FreqtradeBot(LoggingMixin):
         logger.info("Process call bot loop start took %.2f ms", (perf_counter() - counter) * 1000)
         counter = perf_counter()
 
-        with self._measure_execution:
-            self.strategy.analyze(self.active_pair_whitelist)
-
-        logger.info("Process analyze pairs took %.2f ms", (perf_counter() - counter) * 1000)
-        counter = perf_counter()
-
         with self._exit_lock:
             # Check for exchange cancellations, timeouts and user requested replace
             self.manage_open_orders()
 
         logger.info("Process manage open orders took %.2f ms", (perf_counter() - counter) * 1000)
+        counter = perf_counter()
+
+        with self._measure_execution:
+            self.strategy.analyze(self.active_pair_whitelist)
+
+        logger.info("Process analyze pairs took %.2f ms", (perf_counter() - counter) * 1000)
         counter = perf_counter()
 
         # Protect from collisions with force_exit.
