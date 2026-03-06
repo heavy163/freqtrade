@@ -16,7 +16,7 @@ from freqtrade.rpc.api_server.api_schemas import (
 from freqtrade.rpc.api_server.deps import get_rpc
 from pathlib import Path
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 # API version
 # Pre-1.1, no version was provided
@@ -44,17 +44,17 @@ def get_latest_prediction(
 @router.post("/predictions", response_model=CommonResponse, tags=["prediction"])
 def add_prediction(predictions: list[FtPredictionSchema], rpc: RPC = Depends(get_rpc)):
     """Insert predictions"""
-    logger.info(f"Inserting {len(predictions)} predictions start")
+    logger.warning(f"Inserting {len(predictions)} predictions start")
 
     data_array = [p.to_row() for p in predictions]
     data_df = pd.DataFrame(data=data_array, columns=FtPredictionSchema.data_columns())
 
-    logger.info(f"Inserting predictions dataframe len {len(data_df)}")
+    logger.warning(f"Inserting predictions dataframe len {len(data_df)}")
 
     rows = rpc._insert_predictions(data_df)
     FtPrediction.session.remove()
 
-    logger.info(f"Inserting predictions result {rows}")
+    logger.warning(f"Inserting predictions result {rows}")
     return {"code": 0, "messaged": "ok", "data": f"{rows}"}
 
 
