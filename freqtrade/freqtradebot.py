@@ -1900,10 +1900,10 @@ class FreqtradeBot(LoggingMixin):
 
             if filled_val > 0 and minstake and filled_stake < minstake:
                 logger.warning(
-                    f"Order {order_id} for {trade.pair} not cancelled, "
+                    f"Order {order_id} for {trade.pair} shoud not cancelled but force cancelled by user, "
                     f"as the filled amount of {filled_val} would result in an unexitable trade."
                 )
-                return False
+                # return False
             corder = self.exchange.cancel_order_with_result(order_id, trade.pair, trade.amount)
             order_obj.ft_cancel_reason = reason
             # if replacing, retry fetching the order 3 times if the status is not what we need
