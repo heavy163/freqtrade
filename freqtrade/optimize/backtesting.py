@@ -876,11 +876,7 @@ class Backtesting:
                         close_rate = max(close_rate, row[LOW_IDX])
             # Confirm trade exit:
             time_in_force = self.strategy.order_time_in_force["exit"]
-
-            if exit_.exit_type not in (
-                ExitType.LIQUIDATION,
-                # ExitType.PARTIAL_EXIT,
-            ) and not strategy_safe_wrapper(self.strategy.confirm_trade_exit, default_retval=True)(
+            confirmed = strategy_safe_wrapper(self.strategy.confirm_trade_exit, default_retval=True)(
                 pair=trade.pair,
                 trade=trade,  # type: ignore[arg-type]
                 order_type=order_type,
@@ -890,7 +886,11 @@ class Backtesting:
                 sell_reason=exit_reason,  # deprecated
                 exit_reason=exit_reason,
                 current_time=current_time,
-            ):
+            )
+            if exit_.exit_type not in (
+                ExitType.LIQUIDATION,
+                # ExitType.PARTIAL_EXIT,
+            ) and not confirmed:
                 return None
 
             trade.exit_reason = exit_reason
